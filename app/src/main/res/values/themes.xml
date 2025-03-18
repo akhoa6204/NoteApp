@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="LightTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary" type="color">@color/black</item>
+        <item name="android:windowBackground" type="color">@color/white</item>
+        <item name="backgroundColorYellow" type="color">#FFEB3B</item>
+        <item name="backgroundColorGray" type="color">#D9D9D9</item>
+    </style>
+    <style name="DarkTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary" type="color">@color/white</item>
+        <item name="android:windowBackground" type="color">@color/black</item>
+        <item name="backgroundColorGray" type="color">#D9D9D9</item>
+    </style>
+</resources>

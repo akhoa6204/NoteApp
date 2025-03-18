@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NoteApp</string>
+    <string name="register"><u>Register</u></string>
+    <string name="forgot_password"><u>Forgot password</u></string>
+</resources>

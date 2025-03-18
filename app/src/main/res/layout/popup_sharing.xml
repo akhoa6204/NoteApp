@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="400sp"
+    android:layout_height="400sp"
+    android:orientation="vertical"
+    android:padding="20sp"
+    android:background="@drawable/only_border"
+    >
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text='Chia sẻ "Title"'
+        android:textStyle="bold"
+        android:textSize="25sp"
+        android:layout_marginBottom="20sp"
+        />
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Thêm thành viên"
+        android:background="@drawable/only_border"
+        android:padding="20sp"
+        android:layout_marginStart="20sp"
+        android:layout_marginBottom="20sp"
+        />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Những người có quyền truy cập"
+        android:textSize="20sp"
+        android:layout_marginBottom="20sp"
+        />
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/lvMember"
+        />
+</LinearLayout>

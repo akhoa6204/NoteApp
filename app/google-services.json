@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "550660465026",
+    "firebase_url": "https://android-project-c8cae-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "android-project-c8cae",
+    "storage_bucket": "android-project-c8cae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:550660465026:android:ef22679fe5a06377d7ef9b",
+        "android_client_info": {
+          "package_name": "com.example.noteapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqT0qbUjVTrxclBxxHoUCLAx19Qc3Zy3Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
