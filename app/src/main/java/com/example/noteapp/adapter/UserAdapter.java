@@ -2,9 +2,6 @@ package com.example.noteapp.adapter;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,12 +15,8 @@ import android.widget.Toast;
 
 import com.example.noteapp.R;
 import com.example.noteapp.interfacePackage.OnSharedNotePermission;
-import com.example.noteapp.model.NoteModel;
-import com.example.noteapp.model.SharedNote;
 import com.example.noteapp.model.User;
-import com.example.noteapp.myDatabase.Database;
 import com.example.noteapp.myDatabase.FirebaseSyncHelper;
-import com.example.noteapp.settings.UserSession;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;

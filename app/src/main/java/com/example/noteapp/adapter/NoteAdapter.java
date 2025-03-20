@@ -4,37 +4,25 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.PopupWindow;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.LiveData;
 
-import com.example.noteapp.MainActivity;
 import com.example.noteapp.PageNote;
 import com.example.noteapp.SelectionMode;
 import com.example.noteapp.interfacePackage.OnDataSyncListener;
 import com.example.noteapp.model.NoteModel;
 import com.example.noteapp.R;
-import com.example.noteapp.model.SharedNote;
 import com.example.noteapp.model.User;
-import com.example.noteapp.myDatabase.Database;
 import com.example.noteapp.myDatabase.FirebaseSyncHelper;
-import com.example.noteapp.settings.UserSession;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class NoteAdapter extends BaseAdapter {
     private final Context mContext;

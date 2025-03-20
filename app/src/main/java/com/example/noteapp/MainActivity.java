@@ -11,6 +11,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
@@ -18,9 +19,13 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.example.noteapp.adapter.ViewPagerAdapter;
 import com.example.noteapp.interfacePackage.OnDataSyncListener;
 import com.example.noteapp.method.TimeUtil;
+import com.example.noteapp.model.NoteContent;
 import com.example.noteapp.model.NoteModel;
 import com.example.noteapp.model.SharedNote;
 import com.example.noteapp.model.User;
@@ -263,7 +268,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         String currentTime = TimeUtil.getCurrentTimeString();
 
-        NoteModel newNote = new NoteModel(noteId, "Tiêu đề mới", "Nội dung ghi chú", null, userId, currentTime, currentTime);
+        NoteContent content = new NoteContent("Nội dung ghi chú");
+        List<NoteContent> contentList = new ArrayList<>();
+        contentList.add(content);
+
+        NoteModel newNote = new NoteModel(noteId, "Tiêu đề mới", contentList, null, userId, currentTime, currentTime);
 
         // Thêm vào Firebase
         noteRef.child(noteId).setValue(newNote)

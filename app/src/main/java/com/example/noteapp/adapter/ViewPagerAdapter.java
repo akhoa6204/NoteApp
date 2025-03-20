@@ -10,8 +10,6 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.example.noteapp.FragmentNoteList;
 import com.example.noteapp.model.NoteModel;
-import com.example.noteapp.model.SharedNote;
-import com.example.noteapp.myDatabase.Database;
 
 import java.util.ArrayList;
 import java.util.List;

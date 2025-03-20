@@ -1,8 +1,6 @@
 package com.example.noteapp;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
@@ -14,7 +12,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.noteapp.interfacePackage.OnDataSyncListener;
 import com.example.noteapp.model.NoteModel;
 import com.example.noteapp.model.User;
-import com.example.noteapp.myDatabase.Database;
 import com.example.noteapp.myDatabase.FirebaseSyncHelper;
 import com.example.noteapp.settings.AppSettings;
 import com.example.noteapp.settings.UserSession;
