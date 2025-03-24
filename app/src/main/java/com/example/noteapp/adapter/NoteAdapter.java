@@ -4,6 +4,10 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.text.Html;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +15,7 @@ import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
+import androidx.core.text.HtmlCompat;
 import androidx.lifecycle.LifecycleOwner;
 
 import com.example.noteapp.PageNote;
@@ -77,7 +82,9 @@ public class NoteAdapter extends BaseAdapter {
         }
 
         NoteModel note = listNote.get(i);
-        holder.tvTitle.setText(note.getTitle());
+        Spanned spannedText = translateSpanned(note.getTitle());
+
+        holder.tvTitle.setText(spannedText);
 
         if (checkOwner) {
             holder.tvOwner.setVisibility(View.GONE);
@@ -131,6 +138,7 @@ public class NoteAdapter extends BaseAdapter {
                 intent.putExtra("KEY_NOTE_ID", note.getId());
                 intent.putExtra("OWNER", note.getOwner());
                 ((Activity) mContext).startActivity(intent);
+                ((Activity) mContext).finish();
             } else {
                 if (selectedItems.contains(note)) {
                     selectedItems.remove(note);
@@ -177,5 +185,16 @@ public class NoteAdapter extends BaseAdapter {
     static class ViewHolder {
         TextView tvTitle, tvOwner,tvCreated_at, tvTag;
         CheckBox cbSelect;
+    }
+    public Spanned translateSpanned(String text) {
+        if (text == null) return new SpannableString("");
+
+        Spanned spanned = HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_COMPACT);
+        String trimmedText = spanned.toString().replaceAll("\n$", "");
+
+        SpannableString spannable = new SpannableString(trimmedText);
+        TextUtils.copySpansFrom(spanned, 0, trimmedText.length(), null, spannable, 0);
+
+        return spannable;
     }
 }

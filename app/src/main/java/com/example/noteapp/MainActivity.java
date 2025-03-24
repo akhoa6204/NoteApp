@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager2.widget.ViewPager2;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.SpannableString;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -268,11 +270,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         String currentTime = TimeUtil.getCurrentTimeString();
 
-        NoteContent content = new NoteContent("Nội dung ghi chú");
+        NoteContent content = new NoteContent(Html.toHtml(new SpannableString("Nội dung ghi chú mới"), Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE));
         List<NoteContent> contentList = new ArrayList<>();
         contentList.add(content);
 
-        NoteModel newNote = new NoteModel(noteId, "Tiêu đề mới", contentList, null, userId, currentTime, currentTime);
+        NoteModel newNote = new NoteModel(noteId,
+                Html.toHtml(new SpannableString("Tiêu đề mới"), Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE),
+                contentList,
+                null,
+                userId,
+                currentTime,
+                currentTime);
 
         // Thêm vào Firebase
         noteRef.child(noteId).setValue(newNote)
