@@ -125,7 +125,8 @@
             android:textSize="30sp"
             android:textStyle="bold"
             android:paddingTop="10sp"
-            android:paddingBottom="10sp"/>
+            android:paddingBottom="10sp"
+            android:id="@+id/btnList"/>
         <TextView
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -139,30 +140,7 @@
             android:paddingTop="10sp"
             android:paddingBottom="10sp"
             android:id="@+id/btnAddTable"/>
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:fontFamily="@font/material_icons"
-            android:text="\ue412"
-            android:textColor="#FFEB3B"
-            android:textSize="30sp"
-            android:textStyle="bold"
-            android:paddingTop="10sp"
-            android:paddingBottom="10sp"/>
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:fontFamily="@font/material_icons"
-            android:text="\ue745"
-            android:textColor="#FFEB3B"
-            android:textSize="30sp"
-            android:textStyle="bold"
-            android:paddingTop="10sp"
-            android:paddingBottom="10sp"/>
+
     </LinearLayout>
 
 </LinearLayout>

@@ -2,6 +2,7 @@ package com.example.noteapp;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -36,7 +37,7 @@ public class Account extends AppCompatActivity implements View.OnClickListener{
         init();
 
         userId = userSession.getUserSession(this);
-
+        Log.d("DEBUG_ACCOUNT", "userId: " + userId);
         syncHelper.getUser(userId, new OnDataSyncListener() {
             @Override
             public void onNotesUpdated(List<NoteModel> updatesNotes) {
@@ -46,6 +47,12 @@ public class Account extends AppCompatActivity implements View.OnClickListener{
             @Override
             public void onUserLoaded(User userReturn) {
                 user = userReturn;
+                Log.d("DEBUG_ACCOUNT", "User: " + user);
+                if(user != null){
+                    tvName.setText(user.getFirstName() + " " + user.getLastName());
+                    tvName2.setText(user.getFirstName() + " " + user.getLastName());
+                    tvEmail.setText(user.getEmail());
+                }
             }
 
             @Override
@@ -58,11 +65,7 @@ public class Account extends AppCompatActivity implements View.OnClickListener{
 
             }
         });
-        if(user != null){
-            tvName.setText(user.getFirstName() + " " + user.getLastName());
-            tvName2.setText(user.getFirstName() + " " + user.getLastName());
-            tvEmail.setText(user.getEmail());
-        }
+
 
         currentTheme = appSettings.getTheme(this);
         UpdateTheme(appSettings, currentTheme, btnThemeWrap, btnTheme, 1);

@@ -2,6 +2,9 @@ package com.example.noteapp.adapter;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,20 +21,34 @@ import com.example.noteapp.interfacePackage.OnSharedNotePermission;
 import com.example.noteapp.model.User;
 import com.example.noteapp.myDatabase.FirebaseSyncHelper;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class UserAdapter extends BaseAdapter {
     private final Context mContext;
-    private final List<User> listSharedUser;
+    private List<User> listSharedUser;
     private final boolean checkPermission;
     private final String noteId;
+    private final ExecutorService executor;
+    private final FirebaseSyncHelper syncHelper;
+    private final ArrayAdapter<String> permissionAdapter;
+    private final Handler uiHandler;
+
     public UserAdapter(Context mContext, List<User> listSharedUser, boolean checkPermission, String noteId) {
         this.mContext = mContext;
-        this.listSharedUser = listSharedUser;
+        this.listSharedUser = new ArrayList<>(listSharedUser); // Tránh tham chiếu trực tiếp
         this.checkPermission = checkPermission;
         this.noteId = noteId;
+        this.executor = Executors.newSingleThreadExecutor();
+        this.syncHelper = new FirebaseSyncHelper(mContext);
+        this.uiHandler = new Handler(Looper.getMainLooper());
+
+        // Tạo adapter quyền chỉ một lần
+        String[] permissions = {"Read", "Edit"};
+        this.permissionAdapter = new ArrayAdapter<>(mContext, android.R.layout.simple_spinner_item, permissions);
+        this.permissionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     }
 
     @Override
@@ -61,15 +78,18 @@ public class UserAdapter extends BaseAdapter {
             holder = new ViewHolder();
             holder.tvName = convertView.findViewById(R.id.tvName);
             holder.sPermission = convertView.findViewById(R.id.sPermission);
-            holder.btnDelete =convertView.findViewById(R.id.btnDelete);
+            holder.btnDelete = convertView.findViewById(R.id.btnDelete);
             holder.isFirstLoad = true;
+
+            // Áp dụng adapter quyền một lần
+            holder.sPermission.setAdapter(permissionAdapter);
 
             convertView.setTag(holder);
         } else {
             holder = (ViewHolder) convertView.getTag();
         }
 
-        User user  = listSharedUser.get(position);
+        User user = listSharedUser.get(position);
 
         if (user != null) {
             holder.tvName.setText(user.getFirstName() + " " + user.getLastName());
@@ -77,24 +97,13 @@ public class UserAdapter extends BaseAdapter {
             holder.tvName.setText("Không tìm thấy");
         }
 
-        // Danh sách quyền
-        String[] permissions = {"Write"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(mContext, android.R.layout.simple_spinner_item, permissions);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        holder.sPermission.setAdapter(adapter);
-        FirebaseSyncHelper syncHelper = new FirebaseSyncHelper(mContext);
-        syncHelper.getPermissionOfNoteForSharedUser(noteId, user.getId(), new OnSharedNotePermission() {
-            @Override
-            public void onPermission(int permission) {
-                // Gán quyền mặc định
-                holder.sPermission.setSelection(permission);
-            }
+        // Lấy quyền từ Firebase
+        syncHelper.getPermissionOfNoteForSharedUser(noteId, user.getId(), permission -> {
+            holder.sPermission.setSelection(permission);
         });
 
         holder.sPermission.setEnabled(checkPermission);
         holder.sPermission.setClickable(checkPermission);
-
-        ExecutorService executor = Executors.newSingleThreadExecutor();
 
         holder.sPermission.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -103,40 +112,51 @@ public class UserAdapter extends BaseAdapter {
                     holder.isFirstLoad = false;
                     return;
                 }
-
                 if (!checkPermission) return;
 
-                executor.execute(() -> {
-                    syncHelper.updatePermission(noteId, listSharedUser.get(position).getId(), pos);
-                });
+                executor.execute(() -> syncHelper.updatePermission(noteId, user.getId(), pos));
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
 
         holder.btnDelete.setOnClickListener(v -> {
-            if(checkPermission){
-                syncHelper.updateFirebaseSharedNote(noteId, "remove", listSharedUser.get(position).getId());
+            if (checkPermission) {
+                executor.execute(() -> {
+                    syncHelper.updateFirebaseSharedNote(noteId, "remove", user.getId());
 
-                listSharedUser.remove(position);
-                notifyDataSetChanged();
-                Toast.makeText(mContext, "Delete success", Toast.LENGTH_SHORT).show();
-            }
-            else{
+                    // Xóa item an toàn trên UI thread
+                    uiHandler.post(() -> {
+                        listSharedUser.remove(position);
+                        notifyDataSetChanged();
+                    });
+
+                    uiHandler.post(() -> Toast.makeText(mContext, "Delete success", Toast.LENGTH_SHORT).show());
+                });
+            } else {
                 Toast.makeText(mContext, "User is not Owner", Toast.LENGTH_SHORT).show();
             }
         });
 
         return convertView;
     }
+    public void setListSharedUser(List<User> listUser) {
+        if (listUser == null) return; // Tránh lỗi null
 
+        Log.d("DEBUG UserAdapter", "Cập nhật danh sách user: " + listUser);
+
+        if (!this.listSharedUser.equals(listUser)) {
+            this.listSharedUser.clear();
+            this.listSharedUser.addAll(listUser);
+
+            new Handler(Looper.getMainLooper()).post(this::notifyDataSetChanged);
+        }
+    }
     static class ViewHolder {
         TextView tvName;
         Spinner sPermission;
         ImageView btnDelete;
         boolean isFirstLoad;
-
     }
 }

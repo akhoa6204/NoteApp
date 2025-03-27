@@ -141,12 +141,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         syncHelper.stoplistenNote();
     }
     private void loadNotes(List<NoteModel> myNotes, List<NoteModel> shareNotes) {
+        Log.d("DEBUG", "userId: " + userId);
         syncHelper.listenForMyNotes(userId, new OnDataSyncListener() {
             @Override
             public void onNotesUpdated(List<NoteModel> updatesNotes) {
                 myNotes.clear();
                 myNotes.addAll(updatesNotes);
                 adapter.updateDataMyNotes(myNotes);
+                Log.d("DEBUG", "myNotes: " + myNotes);
             }
 
             @Override
@@ -172,6 +174,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 shareNotes.clear();
                 shareNotes.addAll(updatesNotes);
                 adapter.updateDataSharedNotes(shareNotes);
+                Log.d("DEBUG", "shareNotes: " + shareNotes);
+
             }
 
             @Override
@@ -238,9 +242,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 boolean checkPermission = note.getOwner().equals(userId);
                 if(checkPermission){
                     DatabaseReference db_notes = FirebaseDatabase.getInstance().getReference("notes");
+                    DatabaseReference sharedNoteRef = FirebaseDatabase.getInstance().getReference("sharedNote");
                     db_notes.child(note.getId()).removeValue()
                             .addOnSuccessListener(aVoid -> deletedNotes.add(note))
                             .addOnFailureListener(e -> noteErrorList.add(note));
+                    sharedNoteRef.child(note.getId()).removeValue();
                 }else{
                     DatabaseReference db_sharedNotes = FirebaseDatabase.getInstance().getReference("sharedNotes");
                     db_sharedNotes.child(note.getId()).child("shareUsers").child(userId).removeValue()

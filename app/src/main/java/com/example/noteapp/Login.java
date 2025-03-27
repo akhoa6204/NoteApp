@@ -3,6 +3,7 @@ package com.example.noteapp;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
@@ -77,6 +78,9 @@ public class Login extends AppCompatActivity implements View.OnClickListener {
                             FirebaseUser user = mAuth.getCurrentUser();
                             UserSession userSession = new UserSession();
                             userSession.saveUserSession(getBaseContext(), user.getUid());
+                            Log.d("DEBUG_Login", "user: " + user);
+                            Log.d("DEBUG_Login", "userId: " + user.getUid());
+
                             Toast.makeText(getApplicationContext(), "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
 
                             Intent intent = new Intent(getBaseContext(), MainActivity.class);
