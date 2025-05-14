@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Xóa hàng"
+        android:text="@string/delete_row"
         android:textColor="#FF0000"
         android:padding="10dp"
         android:id="@+id/btnDeleteRow"/>
@@ -20,7 +20,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Thêm hàng"
+        android:text="@string/add_row"
         android:padding="10dp"
         android:textColor="@color/black"
         android:id="@+id/btnAddRow"/>

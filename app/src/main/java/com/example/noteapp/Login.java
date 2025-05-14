@@ -24,7 +24,7 @@ import com.google.firebase.auth.FirebaseUser;
 
 
 public class Login extends AppCompatActivity implements View.OnClickListener {
-    private TextView btRegister;
+    private TextView btRegister, tvForgotPassword;
     private Button btLogin;
     private EditText edEmail, edPassword;
 
@@ -36,11 +36,16 @@ public class Login extends AppCompatActivity implements View.OnClickListener {
         edEmail=(EditText) findViewById(R.id.edEmail);
         edPassword=(EditText)findViewById(R.id.edPassword);
 
+        tvForgotPassword=(TextView) findViewById(R.id.tvForgotPassword);
         btRegister=(TextView) findViewById(R.id.btRegister);
         btLogin=(Button) findViewById(R.id.btLogin);
 
         btLogin.setOnClickListener(this);
         btRegister.setOnClickListener(this);
+        tvForgotPassword.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ForgotPassword.class);
+            startActivity(intent);
+        });
 
     }
     @Override
@@ -102,7 +107,6 @@ public class Login extends AppCompatActivity implements View.OnClickListener {
     private void onRegister() {
         Intent intent = new Intent(this, Register.class);
         startActivity(intent);
-        finish();
     }
 
 }

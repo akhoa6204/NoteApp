@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Xóa cột"
+        android:text="@string/delete_column"
         android:textColor="#FF0000"
         android:padding="10dp"
         android:id="@+id/deleteColumn"
@@ -18,14 +18,14 @@
         android:layout_width="140dp"
         android:layout_height="0.5dp"
         android:background="@color/black"/>
+
     <TextView
+        android:id="@+id/addColumn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Thêm cột"
-        android:textColor="@color/black"
         android:padding="10dp"
-        android:id="@+id/addColumn"
-        />
+        android:text="@string/add_column"
+        android:textColor="@color/black" />
 
 
 </LinearLayout>

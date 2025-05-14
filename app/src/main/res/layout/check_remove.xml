@@ -19,7 +19,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:text="Xác nhận xóa ghi chú"
+                    android:text="@string/accept_delete_note"
                     android:textSize="20dp"
                     android:textStyle="bold"
                     android:textColor="@color/black"
@@ -31,7 +31,7 @@
                         <Button
                             android:layout_width="wrap_content"
                             android:layout_height="40dp"
-                            android:text="Xóa"
+                            android:text="@string/delete"
                             android:background="@drawable/border_background_style_second"
                             android:layout_weight="1"
                             android:id="@+id/btnAccept"
@@ -39,7 +39,7 @@
                         <Button
                             android:layout_width="wrap_content"
                             android:layout_height="40dp"
-                            android:text="Không"
+                            android:text="@string/no"
                             android:background="@drawable/border_background"
                             android:layout_weight="1"
                             android:layout_marginStart="10dp"

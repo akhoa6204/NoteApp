@@ -1,21 +1,27 @@
 package com.example.noteapp.model;
 
-import android.text.TextUtils;
-import android.util.Patterns;
-
-import java.util.regex.Pattern;
-
 public class User {
-    private String id, email, firstName, lastName, password;
+    private String id, email, name, imgUrl;
     public User(){
 
     }
-    public User(String id, String email, String firstName, String lastName, String password){
+    public User(String id, String email, String name, String imgUrl){
         this.id = id;
         this.email=email;
-        this.firstName=firstName;
-        this.lastName=lastName;
-        this.password=password;
+        this.name=name;
+        this.imgUrl=imgUrl;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getImgUrl() {
+        return imgUrl;
+    }
+
+    public void setImgUrl(String imgUrl) {
+        this.imgUrl = imgUrl;
     }
 
     public String getId() {
@@ -26,13 +32,10 @@ public class User {
         this.id = id;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getName() {
+        return name;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
 
     public String getEmail() {
         return email;
@@ -40,22 +43,6 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
 }

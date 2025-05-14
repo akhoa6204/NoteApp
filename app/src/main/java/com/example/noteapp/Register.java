@@ -8,6 +8,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -24,9 +25,9 @@ import com.google.firebase.database.FirebaseDatabase;
 //import com.example.noteapp.myDatabase.FirebaseSyncHelper;
 
 public class Register extends AppCompatActivity implements View.OnClickListener {
-    private LinearLayout btBack;
+    private TextView btBack;
     private Button btRegister;
-    private EditText edEmail, edFirstName, edLastName, edPassword, edConfirmPassword;
+    private EditText edEmail, edName, edPassword, edConfirmPassword;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,11 +39,10 @@ public class Register extends AppCompatActivity implements View.OnClickListener 
 
     }
     private void initView(){
-        btBack =(LinearLayout) findViewById(R.id.btBack);
+        btBack =(TextView) findViewById(R.id.btBack);
         btRegister=(Button) findViewById(R.id.btRegister);
         edEmail =(EditText) findViewById(R.id.edEmail);
-        edFirstName =(EditText) findViewById(R.id.edFirstName);
-        edLastName=(EditText)findViewById(R.id.edLastName);
+        edName =(EditText) findViewById(R.id.edName);
         edPassword = (EditText)findViewById(R.id.edPassword);
         edConfirmPassword=(EditText) findViewById(R.id.edConfirmPassword);
     }
@@ -57,8 +57,7 @@ public class Register extends AppCompatActivity implements View.OnClickListener 
 
     private void onRegister() {
         String email = edEmail.getText().toString().trim();
-        String firstName = edFirstName.getText().toString().trim();
-        String lastName = edLastName.getText().toString().trim();
+        String name = edName.getText().toString().trim();
         String password = edPassword.getText().toString().trim();
         String confirmPassword = edConfirmPassword.getText().toString().trim();
 
@@ -73,12 +72,8 @@ public class Register extends AppCompatActivity implements View.OnClickListener 
             return;
         }
         // Kiểm tra tên
-        if (TextUtils.isEmpty(firstName)) {
+        if (TextUtils.isEmpty(name)) {
             Toast.makeText(this, "First name is empty", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (TextUtils.isEmpty(lastName)) {
-            Toast.makeText(this, "Last name is empty", Toast.LENGTH_SHORT).show();
             return;
         }
         // Kiểm tra mật khẩu
@@ -98,7 +93,7 @@ public class Register extends AppCompatActivity implements View.OnClickListener 
                                 String userId = user.getUid(); // Lấy UID từ Firebase Auth
                                 DatabaseReference db_users = FirebaseDatabase.getInstance().getReference("users");
 
-                                User newUser = new User(userId, email, firstName, lastName, password);
+                                User newUser = new User(userId, email, name, "");
 
                                 // Lưu thông tin vào Firebase Realtime Database
                                 db_users.child(userId).setValue(newUser)

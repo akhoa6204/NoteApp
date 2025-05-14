@@ -2,6 +2,11 @@ package com.example.noteapp.settings;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
+
+import androidx.appcompat.app.AppCompatDelegate;
+
+import java.util.Locale;
 
 public class AppSettings {
     public void saveTheme(Context context, int theme) {
@@ -24,14 +29,22 @@ public class AppSettings {
         SharedPreferences sharedPreferences = context.getSharedPreferences("Language", Context.MODE_PRIVATE);
         return sharedPreferences.getInt("language", 1);
     }
-    public void saveNoti(Context context, int noti) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("Notification", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putInt("noti", noti);
-        editor.apply();
+    public void applyLanguage(Context context) {
+        int langValue = getLanguage(context);
+        String langCode = (langValue == 1) ? "vi" : "en";
+        Locale locale = new Locale(langCode);
+        Locale.setDefault(locale);
+        Configuration config = new Configuration();
+        config.setLocale(locale);
+        context.getResources().updateConfiguration(config, context.getResources().getDisplayMetrics());
     }
-    public int getNoti(Context context) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("Notification", Context.MODE_PRIVATE);
-        return sharedPreferences.getInt("noti", 1);
+    public void applyTheme(Context context) {
+        int themeValue = getTheme(context);
+        if (themeValue == 1) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        }
+
     }
 }

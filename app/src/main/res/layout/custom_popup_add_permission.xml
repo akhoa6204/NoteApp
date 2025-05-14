@@ -30,25 +30,27 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="10dp">
                 <EditText
+                    android:id="@+id/edAddMember"
                     android:layout_width="0dp"
-                    android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:hint="Thêm thành viên"
-                    android:background="@drawable/only_border"
-                    android:padding="10dp"
                     android:layout_marginStart="10dp"
-                    android:layout_marginBottom="10dp"
                     android:layout_marginEnd="5dp"
-                    android:id="@+id/edAddMember"/>
+                    android:layout_weight="1"
+                    android:background="@drawable/only_border"
+                    android:hint="@string/add_member"
+                    android:padding="10dp"
+                    />
 
                 <Button
+                    android:id="@+id/btnAdd"
                     android:layout_width="60dp"
                     android:layout_height="40dp"
                     android:background="@drawable/border_background_style_second"
-                    android:text="Add"
-                    android:id="@+id/btnAdd"
+                    android:text="@string/add"
+                    android:layout_gravity="center_vertical"
                     />
             </LinearLayout>
         </LinearLayout>

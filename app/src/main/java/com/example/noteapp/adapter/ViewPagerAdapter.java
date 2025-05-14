@@ -26,6 +26,14 @@ public class ViewPagerAdapter extends FragmentStateAdapter {
         fragmentList.add(FragmentNoteList.newInstance(myNotes, userId));
         fragmentList.add(FragmentNoteList.newInstance(sharedNotes, userId));
     }
+    private String searchQuery = "";
+    public void setSearchQuery(String query) {
+        this.searchQuery = query;
+        for (FragmentNoteList fragment : fragmentList) {
+            fragment.setSearchQuery(query);
+        }
+    }
+
     @NonNull
     @Override
     public Fragment createFragment(int position) {

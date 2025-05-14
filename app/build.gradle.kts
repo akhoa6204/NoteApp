@@ -1,4 +1,4 @@
-plugins {
+    plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -8,7 +8,10 @@ plugins {
 android {
     namespace = "com.example.noteapp"
     compileSdk = 35
-
+    packagingOptions {
+        exclude ("META-INF/NOTICE.md")
+        exclude ("META-INF/LICENSE.md")
+    }
     defaultConfig {
         applicationId = "com.example.noteapp"
         minSdk = 24
@@ -40,7 +43,7 @@ android {
 }
 
 dependencies {
-
+    implementation("androidx.core:core:1.16.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -62,4 +65,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation("com.google.android.material:material:1.12.0")
+    implementation(libs.circleimageview)
+    implementation("com.sun.mail:android-mail:1.6.7")
 }

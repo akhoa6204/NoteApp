@@ -19,52 +19,51 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:padding="16dp"
         android:background="@drawable/border_background"
         >
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Heading"
             android:textStyle="bold"
-            android:textSize="24sp"
-            android:textColor="@color/black"
+            android:textSize="18sp"
+            android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="5sp"
             android:id="@+id/tvTitle"
             />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Hoang Oanh da chia se"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:layout_marginStart="5sp"
             android:id="@+id/tvOwner"
             android:visibility="gone"
+            android:textColor="?attr/colorPrimary"
             />
+
         <LinearLayout
+            android:id="@+id/lrContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginStart="5sp"
-            android:id="@+id/lrContent"
-            >
+            android:orientation="horizontal">
+
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Chu Nhat"
-                android:textSize="18sp"
-                android:layout_marginEnd="10sp"
                 android:id="@+id/tvCreated_at"
-                android:visibility="gone"
-                />
-            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="The Thao"
-                android:textSize="18sp"
+                android:layout_marginEnd="10sp"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/tvTag"
-                android:visibility="gone"
-                />
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="14sp"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 

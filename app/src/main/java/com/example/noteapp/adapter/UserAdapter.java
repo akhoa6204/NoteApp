@@ -38,15 +38,14 @@ public class UserAdapter extends BaseAdapter {
 
     public UserAdapter(Context mContext, List<User> listSharedUser, boolean checkPermission, String noteId) {
         this.mContext = mContext;
-        this.listSharedUser = new ArrayList<>(listSharedUser); // Tránh tham chiếu trực tiếp
+        this.listSharedUser = new ArrayList<>(listSharedUser);
         this.checkPermission = checkPermission;
         this.noteId = noteId;
         this.executor = Executors.newSingleThreadExecutor();
         this.syncHelper = new FirebaseSyncHelper(mContext);
         this.uiHandler = new Handler(Looper.getMainLooper());
 
-        // Tạo adapter quyền chỉ một lần
-        String[] permissions = {"Read", "Edit"};
+        String[] permissions = {mContext.getString(R.string.read_only), mContext.getString(R.string.edit)};
         this.permissionAdapter = new ArrayAdapter<>(mContext, android.R.layout.simple_spinner_item, permissions);
         this.permissionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     }
@@ -81,7 +80,6 @@ public class UserAdapter extends BaseAdapter {
             holder.btnDelete = convertView.findViewById(R.id.btnDelete);
             holder.isFirstLoad = true;
 
-            // Áp dụng adapter quyền một lần
             holder.sPermission.setAdapter(permissionAdapter);
 
             convertView.setTag(holder);
@@ -92,9 +90,9 @@ public class UserAdapter extends BaseAdapter {
         User user = listSharedUser.get(position);
 
         if (user != null) {
-            holder.tvName.setText(user.getFirstName() + " " + user.getLastName());
+            holder.tvName.setText(user.getName());
         } else {
-            holder.tvName.setText("Không tìm thấy");
+            holder.tvName.setText(R.string.no_find);
         }
 
         // Lấy quyền từ Firebase

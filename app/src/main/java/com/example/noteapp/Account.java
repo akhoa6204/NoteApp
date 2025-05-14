@@ -1,15 +1,16 @@
 package com.example.noteapp;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.example.noteapp.interfacePackage.OnDataSyncListener;
 import com.example.noteapp.model.NoteModel;
 import com.example.noteapp.model.User;
@@ -17,179 +18,162 @@ import com.example.noteapp.myDatabase.FirebaseSyncHelper;
 import com.example.noteapp.settings.AppSettings;
 import com.example.noteapp.settings.UserSession;
 import com.google.firebase.auth.FirebaseAuth;
-
 import java.util.List;
+import java.util.Locale;
+import de.hdodenhof.circleimageview.CircleImageView;
 
-public class Account extends AppCompatActivity implements View.OnClickListener{
-    private TextView btnLogOut, btnBack, tvName, tvEmail, tvName2;
-    private LinearLayout btnTheme, btnThemeWrap, btnLanguageWrap, 
-            btnLanguage, btnNotiWrap, btnNoti, lrAccount;
+public class Account extends AppCompatActivity implements View.OnClickListener {
+    private static final int PICK_IMAGE_REQUEST = 1;
+
+    private TextView btnLogOut, btnBack, tvName, tvEmail, tvName2, btnEdit;
+    private TextView tvLanguage, tvTheme, tvAccount, tvChangePassword, tvPassword, tvLanguageLogo, tvThemeLogo;
+    private LinearLayout btnLanguageWrap, btnLanguage, lrAccount, lrPassword;
+    private CircleImageView ivImgUser;
+
     private AppSettings appSettings;
     private UserSession userSession;
-    private int  currentTheme, currentLanguage, currentNoti;
-    private String userId;
-    private User user;
     private FirebaseSyncHelper syncHelper;
+
+    private int currentTheme, currentLanguage;
+    private String userId;
+    private Uri imageUri;
+
     @Override
-    public void onCreate(Bundle savedInstanceState){
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account);
-        init();
+        initViews();
 
         userId = userSession.getUserSession(this);
-        Log.d("DEBUG_ACCOUNT", "userId: " + userId);
         syncHelper.getUser(userId, new OnDataSyncListener() {
-            @Override
-            public void onNotesUpdated(List<NoteModel> updatesNotes) {
-
-            }
-
-            @Override
-            public void onUserLoaded(User userReturn) {
-                user = userReturn;
-                Log.d("DEBUG_ACCOUNT", "User: " + user);
-                if(user != null){
-                    tvName.setText(user.getFirstName() + " " + user.getLastName());
-                    tvName2.setText(user.getFirstName() + " " + user.getLastName());
+            @Override public void onUserLoaded(User user) {
+                if (user != null) {
+                    tvName.setText(user.getName());
+                    tvName2.setText(user.getName());
                     tvEmail.setText(user.getEmail());
                 }
             }
-
-            @Override
-            public void onNoteLoaded(NoteModel note) {
-
-            }
-
-            @Override
-            public void onSharedNoteLoaded(List<User> sharedUserList) {
-
-            }
+            @Override public void onNotesUpdated(List<NoteModel> updatesNotes) {}
+            @Override public void onNoteLoaded(NoteModel note) {}
+            @Override public void onSharedNoteLoaded(List<User> sharedUserList) {}
         });
 
-
         currentTheme = appSettings.getTheme(this);
-        UpdateTheme(appSettings, currentTheme, btnThemeWrap, btnTheme, 1);
-
         currentLanguage = appSettings.getLanguage(this);
-        UpdateTheme(appSettings, currentLanguage, btnLanguageWrap, btnLanguage, 2);
+        applyToggleState(currentLanguage, btnLanguageWrap, btnLanguage, false);
 
-        currentNoti = appSettings.getNoti(this);
-        UpdateTheme(appSettings, currentNoti, btnNotiWrap, btnNoti, 0);
+        updateTexts();
+    }
+
+    private void initViews() {
+        btnLogOut = findViewById(R.id.btnLogOut);
+        btnBack = findViewById(R.id.btnBack);
+        tvEmail = findViewById(R.id.tvEmail);
+        tvName = findViewById(R.id.tvName);
+        tvName2 = findViewById(R.id.tvName2);
+        btnLanguageWrap = findViewById(R.id.btnLanguageWrap);
+        btnLanguage = findViewById(R.id.btnLanguage);
+        btnEdit = findViewById(R.id.btnEdit);
+        lrAccount = findViewById(R.id.lrAccount);
+        lrPassword = findViewById(R.id.lrPassword);
+        ivImgUser = findViewById(R.id.ivImgUser);
+
+        tvLanguage = findViewById(R.id.tvLanguage);
+        tvTheme = findViewById(R.id.tvTheme);
+        tvAccount = findViewById(R.id.tvAccount);
+        tvChangePassword = findViewById(R.id.tvChangePassword);
+        tvPassword = findViewById(R.id.tvPassword);
+        tvLanguageLogo = findViewById(R.id.tvLanguageLogo);
+        tvThemeLogo = findViewById(R.id.tvThemeLogo);
+
+        userSession = new UserSession();
+        appSettings = new AppSettings();
+        syncHelper = new FirebaseSyncHelper(this);
 
         btnLogOut.setOnClickListener(this);
         btnBack.setOnClickListener(this);
-        btnThemeWrap.setOnClickListener(this);
         btnLanguageWrap.setOnClickListener(this);
-        btnNotiWrap.setOnClickListener(this);
         lrAccount.setOnClickListener(this);
-    }
-    public void init(){
-        btnLogOut =(TextView) findViewById(R.id.btnLogOut);
-        btnBack =(TextView) findViewById(R.id.btnBack);
-        tvEmail =(TextView) findViewById(R.id.tvEmail);
-        tvName =(TextView) findViewById(R.id.tvName);
-        tvName2 =(TextView) findViewById(R.id.tvName2);
-        btnTheme =(LinearLayout) findViewById(R.id.btnTheme);
-        btnThemeWrap =(LinearLayout) findViewById(R.id.btnThemeWrap);
-        btnLanguageWrap=(LinearLayout) findViewById(R.id.btnLanguageWrap);
-        btnLanguage=(LinearLayout) findViewById(R.id.btnLanguage);
-        btnNotiWrap=(LinearLayout) findViewById(R.id.btnNotiWrap);
-        btnNoti=(LinearLayout) findViewById(R.id.btnNoti);
-        lrAccount =(LinearLayout) findViewById(R.id.lrAccount);
-        userSession = new UserSession();
-        syncHelper = new FirebaseSyncHelper(this);
-        appSettings = new AppSettings();
+        btnEdit.setOnClickListener(this);
 
-
+        lrPassword.setOnClickListener(v -> startActivity(new Intent(this, ChangePassword.class)));
     }
-    public float changeValue(float value){
+
+    private float dpToPx(float dp) {
         return TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                value,
-                getResources().getDisplayMetrics()
-        );
-    }
-    public void UpdateTheme(AppSettings appSettings, int theme, LinearLayout btnThemeWrap, LinearLayout btnTheme, int type){
-        if(theme == 1){
-            btnThemeWrap.setBackgroundResource(R.drawable.border_toggle);
-            float dp = changeValue(0);
-            btnTheme.setTranslationX(dp);
-            if(type == 1){
-                appSettings.saveTheme(this, 1);
-            }
-            else if(type == 2){
-                appSettings.saveLanguage(this, 1);
-            }
-            else {
-                appSettings.saveNoti(this, 1);
-            }
-        }else {
-            btnThemeWrap.setBackgroundResource(R.drawable.border_toggle_gray);
-            float dp = changeValue(20);
-            btnTheme.setTranslationX(dp);
-            if(type == 1){
-                appSettings.saveTheme(this, -1);
-            }
-            else if(type == 2){
-                appSettings.saveLanguage(this, -1);
-            }
-            else {
-                appSettings.saveNoti(this, -1);
-            }
-        }
-
-    }
-    @Override
-    public void onClick(View v) {
-        if(v.getId() == R.id.btnLogOut){
-            onLogOut();
-        } else if (v.getId() == R.id.btnBack) {
-            onMain();
-        } else if (v.getId() == R.id.btnThemeWrap) {
-            onChangeTheme(appSettings, btnThemeWrap, btnTheme, 1);
-        }else if (v.getId() == R.id.btnLanguageWrap) {
-            onChangeTheme(appSettings, btnLanguageWrap, btnLanguage, 2);
-        }
-        else if (v.getId() == R.id.btnNotiWrap) {
-            onChangeTheme(appSettings, btnNotiWrap, btnNoti, 0);
-        }else if (v.getId() == R.id.lrAccount){
-            onChangeAccount();
-        }
+                TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics());
     }
 
-    private void onChangeAccount() {
-
+    private void applyToggleState(int value, LinearLayout wrapper, LinearLayout toggle, boolean isTheme) {
+        wrapper.setBackgroundResource(value == 1 ? R.drawable.border_toggle : R.drawable.border_toggle_gray);
+        toggle.setTranslationX(dpToPx(value == 1 ? 0 : 20));
+        if (isTheme) appSettings.saveTheme(this, value);
+        else appSettings.saveLanguage(this, value);
     }
 
-    private void onChangeTheme(AppSettings appSettings, LinearLayout btnThemeWrap, LinearLayout btnTheme, int type) {
-        int current;
-        if(type == 1){
-            current = appSettings.getTheme(this);
-        } else if(type == 2){
-            current = appSettings.getLanguage(this);
-        } else {
-            current = appSettings.getNoti(this);
-        }
-
+    private void toggleSetting(boolean isTheme) {
+        int current = isTheme ? appSettings.getTheme(this) : appSettings.getLanguage(this);
         int newValue = (current == 1) ? -1 : 1;
-        UpdateTheme(appSettings, newValue, btnThemeWrap, btnTheme, type);
+        if (isTheme) {
+        } else {
+            applyToggleState(newValue, btnLanguageWrap, btnLanguage, false);
+            changeLanguage(newValue);
+        }
+    }
+    private void changeLanguage(int languageValue) {
+        appSettings.saveLanguage(this, languageValue);
+        appSettings.applyLanguage(this);
+        currentLanguage = languageValue;
+        updateTexts();
     }
 
-
-    private void onMain() {
-        Intent intent = new Intent(this, MainActivity.class);
-        startActivity(intent);
-        finish();
+    private void updateTexts() {
+        btnLogOut.setText(R.string.logout);
+        tvTheme.setText(currentTheme == 1 ? R.string.light_theme : R.string.dark_theme);
+        tvLanguage.setText(currentLanguage == 1 ? R.string.language_vn : R.string.language_en);
+        tvLanguageLogo.setText(R.string.language);
+        tvThemeLogo.setText(R.string.theme);
+        tvAccount.setText(R.string.account);
+        tvChangePassword.setText(R.string.change_password);
+        tvPassword.setText(R.string.password);
     }
 
-    private void onLogOut(){
+    private void logOut() {
         userSession.saveUserSession(this, null);
-
         FirebaseAuth.getInstance().signOut();
-
         Intent intent = new Intent(this, Login.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private void goToMain() {
+        startActivity(new Intent(this, MainActivity.class));
+        finish();
+    }
+
+    private void openImagePicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");
+        startActivityForResult(intent, PICK_IMAGE_REQUEST);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
+            imageUri = data.getData();
+            ivImgUser.setImageURI(imageUri);
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        int id = v.getId();
+        if (id == R.id.btnLogOut) logOut();
+        else if (id == R.id.btnBack) goToMain();
+        else if (id == R.id.btnLanguageWrap) toggleSetting(false);
+        else if (id == R.id.lrAccount) {}
+        else if (id == R.id.btnEdit) openImagePicker();
     }
 }

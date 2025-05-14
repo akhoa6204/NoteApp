@@ -14,6 +14,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.text.style.BackgroundColorSpan;
 import android.text.style.StrikethroughSpan;
 import android.text.style.StyleSpan;
 import android.text.style.UnderlineSpan;
@@ -42,7 +43,10 @@ import androidx.core.text.HtmlCompat;
 import com.example.noteapp.adapter.UserAdapter;
 import com.example.noteapp.custom.CustomEditText;
 import com.example.noteapp.interfacePackage.NoteUpdateListener;
+import com.example.noteapp.interfacePackage.OnCheckExistsSharedUser;
 import com.example.noteapp.interfacePackage.OnDataSyncListener;
+import com.example.noteapp.interfacePackage.PermissionCallback;
+import com.example.noteapp.model.Cursor;
 import com.example.noteapp.model.NoteContent;
 import com.example.noteapp.model.NoteModel;
 import com.example.noteapp.model.User;
@@ -63,29 +67,31 @@ import org.w3c.dom.Text;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class PageNote extends AppCompatActivity implements View.OnClickListener {
     private TextView btnBack, btMore, btShare, btnAddTable, btMatchCase, btnList;
-    private LinearLayout lrContent;
-    private EditText edTitle;
-    private final List<User> sharedUserList = new ArrayList<>();
-    private NoteModel note;
+    private LinearLayout lrContent, lrTitle;
+    private CustomEditText edTitle;
+    private List<User> sharedUserList = new ArrayList<>();
     private UserSession userSession;
     private String userId, owner, noteId;
-    private boolean checkPermission;
     private FirebaseSyncHelper syncHelper;
     private UserAdapter adapter;
     private List<NoteContent> contentList;
-    private boolean isBold, isItalic, isUnderline,  isUnderlineCenter = false;
+    private boolean checkPermission, isBold = false, isItalic = false, isUnderline = false,  isUnderlineCenter = false,
+                    isEditing = false, isLocalEdit = false, isLocalContentChange = false;
     private Runnable updateUIStyle;
-    private boolean isEditing = false;
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_note);
+
         initView();
+        edTitle = createTitleEditText();
+        lrTitle.addView(edTitle);
+
         Intent intent = getIntent();
         if (intent != null ) {
             if (intent.hasExtra("KEY_NOTE_ID")){
@@ -96,165 +102,136 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             }
         }
         userId = userSession.getUserSession(this);
-
         checkPermission = owner.equals(userId);
-
         if (!checkPermission){
             syncHelper.listenForNoteDeletion(this, noteId);
-            syncHelper.listenForNoteUpdation(noteId, new NoteUpdateListener() {
-                @Override
-                public void onTitleUpdated(String newTitle) {
-                    runOnUiThread(() -> {
-                        edTitle.setText(translateSpanned(newTitle));
-                    });
-                }
-
-
-                @Override
-                public void onContentUpdated(List<Object> contentList) {
-                    runOnUiThread(() -> updateUI(contentList));
-                }
-            });
             syncHelper.listenForDeleteShareUserOnNote(this, noteId, userId);
         }
-        syncHelper.getNote(noteId, new OnDataSyncListener() {
+        syncHelper.listenforNoteTitle(noteId, new NoteUpdateListener() {
             @Override
-            public void onNotesUpdated(List<NoteModel> updatesNotes) {
-
-            }
-
-            @Override
-            public void onUserLoaded(User user) {
-
-            }
-
-            @Override
-            public void onNoteLoaded(NoteModel noteReturn) {
-                note = noteReturn;
-                contentList = note.getContent();
-
+            public void onTitleUpdated(String newTitle) {
                 runOnUiThread(() -> {
-                    // Hiển thị trong EditText
-                    edTitle.setText(translateSpanned(note.getTitle()));
-
-                    lrContent.removeAllViews();
-
-                    for (int i = 0; i < note.getContent().size(); i++) {
-                        NoteContent item = note.getContent().get(i);
-                        Log.d("DEBUG", "NoteContent: " + item);
-                        String type = item.getType();
-                        Log.d("DEBUG", "type: " + type);
-
-                        if (type.equals("text")) {
-                            CustomEditText editText = createEditText(item.getTextContent(), i);
-                            lrContent.addView(editText);
-
-                            if (checkPermission) {
-                                editText.setEnabled(true);
-                            } else {
-                                editText.setEnabled(false);
-                                editText.setTextColor(Color.BLACK);
-                            }
+                    String currentText = edTitle.getText().toString();
+                    String newText = newTitle;
+                    int cursorPosition = edTitle.getSelectionStart();
+                    if (!currentText.equals(newText)) {
+                        int lengthDifference = newText.length() - currentText.length();
+                        if (lengthDifference != 0) {
+                            edTitle.getText().replace(0, currentText.length(), newText);
                         }
-                        else if (type.equals("table")) {
-                            List<List<String>> tableData = item.getTableContent(); // Lấy dữ liệu bảng từ NoteContent
 
-                            if (tableData != null && !tableData.isEmpty()) {
-                                Log.d("DEBUG", "tableData: " + tableData);
-
-                                LinearLayout table = createTableWithControls(tableData, i);
-                                lrContent.addView(table);
-                                table.setEnabled(checkPermission);
-                                setTableEnabled(table, checkPermission);
-                            } else {
-                                Log.e("ERROR", "Table data is null or empty");
-                            }
-                        }
+                        edTitle.post(() -> {
+                            int safeCursorPosition = Math.min(cursorPosition + lengthDifference, edTitle.length());
+                            edTitle.setSelection(safeCursorPosition);
+                        });
                     }
                 });
             }
             @Override
-            public void onSharedNoteLoaded(List<User> sharedUserList) {
+            public void onContentUpdated(List<Object> contentList) {
+            }
+
+        });
+        syncHelper.listenForNoteContent(noteId, new NoteUpdateListener(){
+            @Override
+            public void onTitleUpdated(String newTitle) {
+
+            }
+
+            @Override
+            public void onContentUpdated(List<Object> contentList) {
+                if (isLocalContentChange) {
+                    isLocalContentChange = false;
+                    return;
+                }
+                runOnUiThread(() -> updateUI(contentList));
+            }
+        });
+        syncHelper.listenForUpdatePermission(noteId, userId, new PermissionCallback() {
+            @Override
+            public void onPermissionResult(Integer permission) {
+                boolean isOwner = checkPermission;
+                boolean canEdit = permission != null && permission == 1;
+                boolean isEditable = isOwner || canEdit;
+
+                btMatchCase.setEnabled(isEditable);
+                btnList.setEnabled(isEditable);
+                btnAddTable.setEnabled(isEditable);
+                lrContent.setEnabled(isEditable);
+
+                edTitle.setEnabled(isEditable);
+                edTitle.setTextColor(isEditable ? Color.BLACK : Color.GRAY);
+
+                for (int i = 0; i < lrContent.getChildCount(); i++) {
+                    View element = lrContent.getChildAt(i);
+                    if (element instanceof CustomEditText) {
+                        CustomEditText editText = (CustomEditText) element;
+                        editText.setEnabled(isEditable);
+                        editText.setTextColor(isEditable ? Color.BLACK : Color.GRAY);
+                    } else if (element instanceof LinearLayout) {
+                        setTableEnabled((LinearLayout) element, isEditable);
+                    }
+                }
 
             }
         });
-        if (checkPermission) {
-            edTitle.setEnabled(true);
-        }
-        else {
-            edTitle.setEnabled(false);
-            edTitle.setTextColor(Color.BLACK);
-        }
+        syncHelper.listenForSharedUserNote(noteId, tempUserList -> {
+            runOnUiThread(() -> {
+                sharedUserList.clear();
+                if (tempUserList != null) {
+                    sharedUserList.addAll(tempUserList);
+                }
+                if (adapter != null) {
+                    runOnUiThread(() ->{
+                        adapter.setListSharedUser(sharedUserList);
+                    });
+                } else {
+                    adapter = new UserAdapter(this, sharedUserList, checkPermission, noteId);
+                }
+            });
+        });
+
         edTitle.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                isLocalEdit = true;
+            }
             @Override
             public void afterTextChanged(Editable s) {
-                String newTitle = Html.toHtml(s, Html.TO_HTML_PARAGRAPH_LINES_INDIVIDUAL);
+                if (!isLocalEdit) return;
 
+                String newTitle = s.toString();
                 if (!newTitle.isEmpty()) {
                     syncHelper.updateFirebaseNote(noteId, "title", newTitle);
-                }else{
-                    syncHelper.updateFirebaseNote(noteId,"title", "Title");
+                } else {
+                    syncHelper.updateFirebaseNote(noteId,"title", "");
                 }
+
+                isLocalEdit = false;
             }
         });
 
+        btMatchCase.setOnClickListener(this);
+        btnList.setOnClickListener(this);
+        btnAddTable.setOnClickListener(this);
+        lrContent.setOnClickListener(this);
         btnBack.setOnClickListener(this);
         btMore.setOnClickListener(this);
         btShare.setOnClickListener(this);
-        if (checkPermission){
-            btnAddTable.setOnClickListener(this);
-            lrContent.setOnClickListener(this);
-        }
-        btMatchCase.setOnClickListener(this);
-        btnList.setOnClickListener(this);
-        syncHelper.getSharedNote(noteId, new OnDataSyncListener() {
-            @Override
-            public void onNotesUpdated(List<NoteModel> updatesNotes) {
+    }
 
-            }
-            @Override
-            public void onUserLoaded(User user) {
+    @Override
+    public void onResume(){
+        super.onResume();
 
-            }
-            @Override
-            public void onNoteLoaded(NoteModel note) {
-
-            }
-            @Override
-            public void onSharedNoteLoaded(List<User> sharedUserListReturn) {
-                Log.d("DEBUG_PageNote", "sharedUserListReturn: " + sharedUserListReturn);
-                sharedUserList.clear();
-                sharedUserList.addAll(sharedUserListReturn);
-
-                if (adapter == null) {
-                    adapter = new UserAdapter(getBaseContext(), sharedUserList, checkPermission, noteId);
-                } else {
-                    runOnUiThread(() ->{
-                        Log.d("DEBUG_PageNote", "Cập nhật Adapter với danh sách: " + sharedUserList);
-                        adapter.setListSharedUser(sharedUserList);
-                    });
-                }
-
-                syncHelper.listenForSharedUserNote(noteId, tempUserList -> {
-                    runOnUiThread(() -> {
-                        sharedUserList.clear();
-                        sharedUserList.addAll(tempUserList);
-                        Log.d("DEBUG", "sharedUserListUpdate: " + sharedUserList);
-                        if (adapter != null) {
-                            adapter.setListSharedUser(sharedUserList);
-                        } else {
-                            adapter = new UserAdapter(getBaseContext(), sharedUserList, checkPermission, noteId);
-                        }
-                    });
-                });
-            }
-        });
+    }
+    @Override
+    public void onPause() {
+        super.onPause();
+        syncHelper.stopListeningForNoteDeletion(noteId);
+        syncHelper.stopListeningForNoteUpdation(noteId);
+        syncHelper.stopSharedNoteDeletionListener(noteId);
+        syncHelper.stopListeningForSharedNote(noteId);
     }
     public Spanned translateSpanned(String text) {
         if (text == null) return new SpannableString("");
@@ -272,49 +249,43 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
     }
     private void setTableEnabled(LinearLayout lrLayout, boolean enabled) {
         for (int i = 0; i < lrLayout.getChildCount(); i++) {
-            View tableView = lrLayout.getChildAt(i);
-            if (tableView instanceof TableLayout) {
-                TableLayout table = (TableLayout) tableView;
-                for (int rowIndex = 0; rowIndex < table.getChildCount(); rowIndex++) {
-                    View rowView = table.getChildAt(rowIndex);
-                    if (rowView instanceof TableRow) {
-                        TableRow row = (TableRow) rowView;
-                        for (int colIndex = 0; colIndex < row.getChildCount(); colIndex++) {
-                            View cell = row.getChildAt(colIndex);
-                            if (cell instanceof CustomEditText) {
-                                cell.setEnabled(enabled);
-                                ((CustomEditText) cell).setTextColor(Color.BLACK);
-                            }
+            LinearLayout rowView =(LinearLayout) lrLayout.getChildAt(i);
+            for (int j = 0; j < rowView.getChildCount(); j++){
+                View column = rowView.getChildAt(j);
+                column.setEnabled(enabled);
+                if (column instanceof TableLayout){
+                    TableLayout table = (TableLayout) column;
+                    for(int z = 0; z < table.getChildCount(); z++){
+                        if (!(table.getChildAt(z) instanceof TableRow)) continue;
+                        TableRow row = (TableRow) table.getChildAt(z);
+                        for (int h = 0; h < row.getChildCount(); h++){
+                            row.getChildAt(h).setEnabled(enabled);
                         }
                     }
                 }
-                break; // Đã tìm thấy bảng thì thoát vòng lặp
             }
         }
     }
     public void initView(){
         btnBack = (TextView) findViewById(R.id.btnBack);
         btMore= (TextView) findViewById(R.id.btMore);
-        edTitle =(EditText) findViewById(R.id.edTitle);
-//        edContent=(EditText) findViewById(R.id.edContent);
         btnList = (TextView) findViewById(R.id.btnList);
         btShare=(TextView) findViewById(R.id.btShare);
         userSession = new UserSession();
         syncHelper = new FirebaseSyncHelper(this);
         btnAddTable = (TextView) findViewById(R.id.btnAddTable);
         lrContent = (LinearLayout) findViewById(R.id.lrContent);
+        lrTitle = (LinearLayout) findViewById(R.id.lrTitle);
         contentList = new ArrayList<>();
         btMatchCase = (TextView) findViewById(R.id.btMatchCase);
     }
     @Override
     public void onDestroy(){
         super.onDestroy();
-        if(!checkPermission){
-            syncHelper.stopListeningForNoteDeletion();
-            syncHelper.stopListeningForNoteUpdation();
-            syncHelper.stopSharedNoteDeletionListener();
-            syncHelper.stopListeningForSharedNote();
-        }
+        syncHelper.stopListeningForNoteDeletion(noteId);
+        syncHelper.stopListeningForNoteUpdation(noteId);
+        syncHelper.stopSharedNoteDeletionListener(noteId);
+        syncHelper.stopListeningForSharedNote(noteId);
     }
     @Override
     public void onClick(View view){
@@ -340,7 +311,8 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
         }
         else if (view.getId() == R.id.btMatchCase){
             showPopUpTextStyle(view);
-        }else if (view.getId() == R.id.btnList) {
+        }
+        else if (view.getId() == R.id.btnList) {
             View currentView = getCurrentFocus();
             if (currentView instanceof EditText) {
                 EditText editText = (EditText) currentView;
@@ -367,9 +339,7 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                 editText.setSelection(editText.getText().length()); // Giữ vị trí con trỏ
             }
         }
-
     }
-    // Hàm đếm số lần xuất hiện của "• "
     private int countOccurrences(String text, String target) {
         int count = 0, index = 0;
         while ((index = text.indexOf(target, index)) != -1) {
@@ -387,11 +357,9 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 true);
-
         btnDelete.setOnClickListener(v -> {
-            popupWindow.dismiss();  // Đóng popup cũ trước
+            popupWindow.dismiss();
 
-            // Tạo một popup mới
             View confirmView = getLayoutInflater().inflate(R.layout.check_remove, null);
             PopupWindow confirmPopup = new PopupWindow(
                     confirmView,
@@ -484,17 +452,30 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                 return;
             }
 
-            syncHelper.checkIfEmailExists(email, (exists, user) -> {
+            syncHelper.checkIfEmailExists(noteId, email, (exists, user, permission) -> {
+                if (permission != null && permission.equals("owner")) {
+                    Toast.makeText(getBaseContext(), "User is owner", Toast.LENGTH_SHORT).show();
+                    return;
+                };
                 if (exists) {
-                    Toast.makeText(getBaseContext(), "Add User success", Toast.LENGTH_SHORT).show();
-
-                    syncHelper.updateFirebaseSharedNote(noteId, "add", user.getId());
-                    edAddMember.setText("");
-                    sharedUserList.add(user);
-                    runOnUiThread(() -> {
-                        adapter.setListSharedUser(sharedUserList);
+                    syncHelper.checkSharedUserForNote(noteId, email, new OnCheckExistsSharedUser() {
+                        @Override
+                        public void checkExists(boolean result) {
+                            if(result){
+                                Toast.makeText(getBaseContext(), "User exists", Toast.LENGTH_SHORT).show();
+                            }else{
+                                syncHelper.updateFirebaseSharedNote(noteId, "add", user.getId());
+                                Toast.makeText(getBaseContext(), "Add User success", Toast.LENGTH_SHORT).show();
+                                edAddMember.setText("");
+                                sharedUserList.add(user);
+                                runOnUiThread(() -> {
+                                    adapter.setListSharedUser(sharedUserList);
+                                });
+                            }
+                        }
                     });
-                } else {
+                }
+                else {
                     Toast.makeText(getBaseContext(), "Email does not exist", Toast.LENGTH_SHORT).show();
                     edAddMember.setText("");
                 }
@@ -502,7 +483,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
         });
     }
     public void addTable() {
-        // Tạo bảng trống
         List<List<String>> emptyTable = new ArrayList<>();
         for (int i = 0; i < 2; i++) {
             List<String> row = new ArrayList<>();
@@ -512,9 +492,7 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             emptyTable.add(row);
         }
 
-        int newIndex = lrContent.getChildCount();
-        // Cập nhật danh sách cục bộ
-        contentList.add(new NoteContent(emptyTable));
+        int newIndex = lrContent.getChildCount();contentList.add(new NoteContent(emptyTable));
         contentList.add(new NoteContent(""));
 
         // Hiển thị trên UI
@@ -529,10 +507,10 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("content/" + newIndex + "/type", "table");
-        updates.put("content/" + newIndex + "/tableContent", emptyTable); // Đúng key JSON
+        updates.put("content/" + newIndex + "/tableContent", emptyTable);
 
         updates.put("content/" + (newIndex + 1) + "/type", "text");
-        updates.put("content/" + (newIndex + 1) + "/textContent", ""); // Đúng key JSON
+        updates.put("content/" + (newIndex + 1) + "/textContent", "");
 
         noteRef.updateChildren(updates);
     }
@@ -574,6 +552,13 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
                 selectionStart = start;
+                int lineStart = s.toString().lastIndexOf("\n", selectionStart - 1) + 1;
+                int lineEnd = s.toString().indexOf("\n", selectionStart);
+                if (lineEnd == -1) lineEnd = s.length();
+
+                String currentLine = s.subSequence(lineStart, lineEnd).toString();
+
+                isEditing = currentLine.startsWith("• ");
             }
 
             @Override
@@ -581,18 +566,15 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (isUpdating) return; // Ngăn vòng lặp vô hạn
+                if (isUpdating) return;
 
                 String rawText = s.toString();
                 if (rawText.equals(previousText)) return;
 
                 isUpdating = true;
-                int cursorPosition = editText.getSelectionStart(); // Giữ vị trí con trỏ
-
-                // Đếm số lượng danh sách trước khi thay đổi
+                int cursorPosition = editText.getSelectionStart();
                 int countBefore = countOccurrences(previousText, "• ");
 
-                // Nếu có dòng bắt đầu bằng "- ", chuyển thành "• "
                 if (rawText.contains("\n- ") || rawText.startsWith("- ")) {
                     rawText = rawText.replaceAll("(?m)^- ", "• ");
                     editText.setText(rawText);
@@ -600,94 +582,151 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                     isEditing = true;
                 }
 
-                // 🔥 Khi nhấn ENTER trong chế độ danh sách, thêm "• "
                 if (isEditing && rawText.endsWith("\n")) {
-                    rawText += "• "; // Thêm "• " vào cuối
+                    rawText += "• ";
                     editText.setText(rawText);
-                    editText.setSelection(rawText.length()); // Giữ vị trí con trỏ
+                    editText.setSelection(rawText.length());
                 }
 
 
-                // Đếm số lượng danh sách sau khi thay đổi
                 int countAfter = countOccurrences(rawText, "• ");
                 int countDashAfter = countOccurrences(rawText, "\n- ");
 
-                // Bật isEditing nếu vừa thêm dấu "• "
                 if (!isEditing && rawText.endsWith("• ")) {
                     isEditing = true;
                 }
 
-                // Nếu số lượng "• " giảm hoặc không còn "- ", tắt isEditing
                 if (countAfter < countBefore && countDashAfter == 0) {
                     isEditing = false;
                 }
+                if (cursorPosition > 0) {
+                    applyTextStyles(s, cursorPosition - 1, cursorPosition);
+                }
 
-                // 🔥 Cập nhật Firebase nếu có thay đổi
                 if (!rawText.equals(previousText)) {
                     DatabaseReference noteRef = FirebaseDatabase.getInstance()
                             .getReference("notes").child(noteId)
                             .child("content").child(String.valueOf(editText.getTag()))
                             .child("textContent");
 
+                    isLocalContentChange = true;
                     noteRef.setValue(translateHtml(s)).addOnCompleteListener(task -> {
                         isUpdating = false;
                     });
+
                 }
 
-                previousText = rawText; // Cập nhật nội dung trước đó
+                previousText = rawText;
                 isUpdating = false;
             }
 
         });
-
+        editText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                int offset = editText.getSelectionStart();
+//                updateCursorInFirebase(noteId, userId, offset, "text", (int) editText.getTag(), -1, -1 );
+            }
+        });
         editText.setOnSelectionChangeListener(new CustomEditText.OnSelectionChangeListener() {
             @Override
             public void onSelectionChanged(int start, int end) {
                 updateTextStyleState(editText, start, end);
+//                updateCursorInFirebase(noteId, userId, start, "text", (int) editText.getTag(), -1, -1);
             }
         });
 
         return editText;
     }
     private void updateUI(List<Object> contentList) {
+        int focusedIndex = -1;
+        int cursorPosition = -1;
+
+        View focusedView = lrContent.getFocusedChild();
+        if (focusedView instanceof CustomEditText) {
+            focusedIndex = lrContent.indexOfChild(focusedView);
+            cursorPosition = ((EditText) focusedView).getSelectionStart();
+        }
+
         for (int position = 0; position < contentList.size(); position++) {
             Object content = contentList.get(position);
 
-            if (content instanceof String) { // Nếu là văn bản
+            if (content instanceof String) {
+                Spanned newText = translateSpanned((String) content);
+
                 if (position < lrContent.getChildCount()) {
                     View viewNow = lrContent.getChildAt(position);
+
                     if (viewNow instanceof CustomEditText) {
-                        ((CustomEditText) viewNow).setText(translateSpanned((String) content));
-                    }
-                    else {
-                        lrContent.removeViewAt(position);
-                        lrContent.addView(createEditText((String) content, position), position);
-                    }
-                }
-                else {
-                    lrContent.addView(createEditText((String) content, position));
-                }
-            }
-            else if (content instanceof List) { // Nếu là bảng
-                if (position < lrContent.getChildCount()) {
-                    View viewNow = lrContent.getChildAt(position);
-                    if (viewNow instanceof TableLayout) {
-                        updateTable((TableLayout) viewNow, (List<List<String>>) content, position);
+                        CustomEditText editText = (CustomEditText) viewNow;
+                        String currentText = editText.getText().toString();
+
+                        if (!currentText.equals(newText)) {
+                            int lengthDiff = newText.length() - currentText.length();
+                            editText.setText(newText);
+
+                            if (position == focusedIndex && cursorPosition != -1) {
+                                int safeCursor = Math.min(cursorPosition + lengthDiff, newText.length());
+                                editText.post(() -> editText.setSelection(safeCursor));
+                            }
+                        }
                     } else {
                         lrContent.removeViewAt(position);
-                        lrContent.addView(createTableWithControls((List<List<String>>) content, position), position);
+                        lrContent.addView(createEditText(newText.toString(), position), position);
                     }
                 } else {
+                    lrContent.addView(createEditText(newText.toString(), position));
+                }
+            }
+
+            else if (content instanceof List) {
+                if (position < lrContent.getChildCount()) {
+                    View viewNow = lrContent.getChildAt(position);
+
+                    if (viewNow instanceof LinearLayout) {
+                        LinearLayout outerLayout = (LinearLayout) viewNow;
+                        if (outerLayout.getChildCount() > 1) {
+                            View maybeViewGroup = outerLayout.getChildAt(1);
+                            if (maybeViewGroup instanceof LinearLayout) {
+                                LinearLayout viewGroup = (LinearLayout) maybeViewGroup;
+
+                                if (viewGroup.getChildCount() > 0) {
+                                    View maybeTable = viewGroup.getChildAt(viewGroup.getChildCount() - 1);
+                                    if (maybeTable instanceof TableLayout) {
+                                        TableLayout table = (TableLayout) maybeTable;
+                                        updateTable(table, (List<List<String>>) content, position);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    lrContent.removeViewAt(position);
+                    lrContent.addView(createTableWithControls((List<List<String>>) content, position), position);
+                }
+                else {
                     lrContent.addView(createTableWithControls((List<List<String>>) content, position));
                 }
             }
+
         }
 
-        // Xóa phần dư nếu UI nhiều hơn contentList
         while (lrContent.getChildCount() > contentList.size()) {
             lrContent.removeViewAt(lrContent.getChildCount() - 1);
         }
+
+        if (focusedIndex >= 0 && focusedIndex < lrContent.getChildCount()) {
+            View view = lrContent.getChildAt(focusedIndex);
+            if (view instanceof EditText) {
+                EditText editText = (EditText) view;
+                editText.requestFocus();
+                int textLength = editText.getText().length();
+                int safeCursor = Math.min(cursorPosition, textLength);
+                editText.setSelection(safeCursor);
+            }
+        }
     }
+
     private void updateTable(TableLayout tableLayout, List<List<String>> newData, int tablePosition) {
         int rowIndex = 0;
         int viewIndex = 0;
@@ -735,7 +774,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             }
         }
     }
-    // Cập nhật hàng hiện có
     private void updateTableRow(TableRow row, List<String> rowData, int tablePosition, int rowIndex) {
         int cellCount = row.getChildCount();
         int newCellCount = rowData.size();
@@ -771,7 +809,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             row.removeViewAt(row.getChildCount() - 1);
         }
     }
-    // Tạo ô mới và thêm TextWatcher để cập nhật Firebase
     private CustomEditText createTableCell(String text, int tablePosition, int rowIndex, int colIndex) {
         CustomEditText cell = new CustomEditText(this, null);
         cell.setBackground(null);
@@ -786,9 +823,7 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                 .child("tableContent").child(String.valueOf(rowIndex))
                 .child(String.valueOf(colIndex));
 
-        cellRef.setValue("");
-        cell.setTag(new int[]{tablePosition, rowIndex, colIndex}); // Lưu vị trí vào Tag
-
+        cell.setTag(new int[]{tablePosition, rowIndex, colIndex});
         cell.addTextChangedListener(new TextWatcher() {
             private String previousText = text;
 
@@ -805,7 +840,11 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
 
                 previousText = newText;
 
-                // 🔥 Lấy vị trí mới nhất từ Tag
+                int cursorPosition = cell.getSelectionStart();
+                if (cursorPosition > 0) {
+                    applyTextStyles(s, cursorPosition - 1, cursorPosition);
+                }
+
                 int[] positions = (int[]) cell.getTag();
                 int tablePos = positions[0];
                 int rowPos = positions[1];
@@ -816,13 +855,30 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                         .child("tableContent").child(String.valueOf(rowPos))
                         .child(String.valueOf(colPos));
 
+                isLocalContentChange = true;
                 cellRef.setValue(translateHtml(s));
+
+            }
+
+        });
+        cell.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                int cursorPosition = cell.getSelectionStart();
+                int[] positions = (int[]) cell.getTag();
+//                 (noteId, userId, cursorPosition, "table", positions[0], positions[1], positions[2]);
             }
         });
 
+        cell.setOnSelectionChangeListener(new CustomEditText.OnSelectionChangeListener() {
+            @Override
+            public void onSelectionChanged(int start, int end) {
+                updateTextStyleState(cell, start, end);
+                int[] positions = (int[]) cell.getTag();
+//                updateCursorInFirebase(noteId, userId, start, "table", positions[0], positions[1], positions[2]);
+            }
+        });
         return cell;
     }
-    // Tạo hàng mới với TextWatcher để cập nhật Firebase
     private TableRow createTableRow(List<String> rowData, int tablePosition, int rowIndex) {
         TableRow row = new TableRow(this);
 
@@ -830,21 +886,19 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             CustomEditText cell = createTableCell(rowData.get(j), tablePosition, rowIndex, j);
             row.addView(cell);
 
-            // Nếu không phải cột cuối thì thêm đường kẻ dọc
             if (j < rowData.size() - 1) {
                 row.addView(createVerticalDivider());
             }
         }
 
         return row;
-    }    // Tạo đường kẻ dọc
+    }
     private View createVerticalDivider() {
         View divider = new View(this);
         divider.setLayoutParams(new TableRow.LayoutParams(3, TableRow.LayoutParams.MATCH_PARENT));
         divider.setBackgroundColor(Color.BLACK);
         return divider;
     }
-    // Tạo đường kẻ ngang
     private View createHorizontalDivider() {
         View divider = new View(this);
         divider.setLayoutParams(new TableLayout.LayoutParams(
@@ -852,7 +906,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
         divider.setBackgroundColor(Color.BLACK);
         return divider;
     }
-    // Tạo nút "btMore" cho hàng hoặc cột
     private TextView createBtMoreButton(boolean isColumn) {
         TextView button = new TextView(this);
 
@@ -864,7 +917,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
     }
     @SuppressLint("SetTextI18n")
     public LinearLayout createTableWithControls(List<List<String>> tableData, int position) {
-        // Layout chính bọc ngoài bảng
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         LinearLayout rowUpdateColumn = new LinearLayout(this);
@@ -890,8 +942,7 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
         );
         buttonColumn.setLayoutParams(textParams);
 
-        // Thêm vào rowUpdateColumn
-        rowUpdateColumn.addView(spaceView); // Thêm View ảo để đẩy TextView sang phải
+        rowUpdateColumn.addView(spaceView);
         rowUpdateColumn.addView(buttonColumn);
         LinearLayout rowUpdateRow = new LinearLayout(this);
         rowUpdateRow.setLayoutParams(new LinearLayout.LayoutParams(
@@ -976,12 +1027,11 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                     if (rowCount > 0){
                         TableRow firstRow = (TableRow) currentTable.getChildAt(0);
                         for (int i = 0; i < firstRow.getChildCount(); i++){
-                            if (firstRow.getChildAt(i) instanceof EditText){
+                            if (firstRow.getChildAt(i) instanceof CustomEditText){
                                 colIndex++;
                             }
                         }
                     }
-                    // Không cho xóa nếu chỉ còn 1 cột
                     if (colIndex <= 1) {
                         Toast.makeText(this, "At least 1 column required", Toast.LENGTH_SHORT).show();
                         return;
@@ -992,20 +1042,31 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                         if (!(rowView instanceof TableRow)) continue;
 
                         TableRow row = (TableRow) rowView;
-                        row.removeViewAt(row.getChildCount() - 1);
-                        row.removeViewAt(row.getChildCount() - 1);
-
-                        DatabaseReference cellRef = FirebaseDatabase.getInstance().getReference("notes")
-                                .child(noteId).child("content").child(String.valueOf(tablePosition))
-                                .child("tableContent").child(String.valueOf(tableRowIndex))
-                                .child(String.valueOf(colIndex - 1));
-                        cellRef.removeValue();
+                        row.removeViewAt(row.getChildCount() - 1); // Xóa cột
+                        row.removeViewAt(row.getChildCount() - 1); // Xóa đường
                         tableRowIndex++;
                     }
+                    List<List<String>> newTableContent = new ArrayList<>();
+                    for (int i = 0; i < currentTable.getChildCount(); i++) {
+                        View rowView = currentTable.getChildAt(i);
+                        if (!(rowView instanceof  TableRow)) continue;
+                        TableRow row = (TableRow) currentTable.getChildAt(i);
+                        List<String> rowContent = new ArrayList<>();
+                        for (int j = 0; j < row.getChildCount(); j++) {
+                            View cellView = row.getChildAt(j);
+                            if (cellView instanceof CustomEditText) {
+                                rowContent.add(((CustomEditText) cellView).getText().toString());
+                            }
+                        }
+                        newTableContent.add(rowContent);
+                    }
+
+                    DatabaseReference tableRef = FirebaseDatabase.getInstance().getReference("notes")
+                            .child(noteId).child("content").child(String.valueOf(tablePosition)).child("tableContent");
+                    tableRef.setValue(newTableContent);
                 }
             });
 
-            // Hiển thị popup ngay bên dưới buttonColumn + cách 10dp
             popupWindow.showAtLocation(v, Gravity.NO_GRAVITY, location[0], location[1] + v.getHeight());
 
         });
@@ -1030,7 +1091,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                 lrContent.removeViewAt(tableIndex  + 1);
                 lrContent.removeViewAt(tableIndex);
 
-                // 🚀 Cập nhật lại contentList
                 if (tableIndex >= 0 && tableIndex < contentList.size()) {
                     contentList.remove(tableIndex);
                     if (tableIndex < contentList.size() && "text".equals(contentList.get(tableIndex).getType())) {
@@ -1038,7 +1098,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                     }
                 }
 
-                // 🔥 Cập nhật lại tag cho tất cả EditText còn lại
                 for (int i = 0; i < lrContent.getChildCount(); i++) {
                     View child = lrContent.getChildAt(i);
                     if (child instanceof EditText) {
@@ -1322,7 +1381,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             isUnderlineCenter = spannable.getSpans(start, end, StrikethroughSpan.class).length > 0;
         }
 
-        // Kiểm tra nếu updateUIStyle != null trước khi chạy
         if (updateUIStyle != null) {
             updateUIStyle.run();
         }
@@ -1333,7 +1391,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
         if (!isUnderline) removeSpan(s, UnderlineSpan.class, start, end, -1);
         if (!isUnderlineCenter) removeSpan(s, StrikethroughSpan.class, start, end, -1);
 
-        // Nếu bật thì áp dụng lại
         if (isBold) {
             s.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
@@ -1453,4 +1510,19 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             Log.e("UpdateTags", "LinearLayout không hợp lệ");
         }
     }
+    private CustomEditText createTitleEditText() {
+        CustomEditText edTitle = new CustomEditText(this, null);
+        edTitle.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        edTitle.setHint(getString(R.string.heading));
+        edTitle.setTextSize(30);
+        edTitle.setTypeface(null, Typeface.BOLD);
+        edTitle.setBackground(null);
+        edTitle.setId(R.id.edTitle);
+        return edTitle;
+    }
+
+
 }

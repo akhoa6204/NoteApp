@@ -27,6 +27,7 @@ public class FragmentNoteList extends Fragment {
     private NoteAdapter noteAdapter;
     private List<NoteModel> pendingNotes;
     private String userId;
+    private String searchQuery = "";
 
     public static FragmentNoteList newInstance(List<NoteModel> notes, String userId) {
         Log.d("DEBUG", "Khởi tạo FragmentNoteList với số lượng ghi chú: " + notes.size());
@@ -38,7 +39,12 @@ public class FragmentNoteList extends Fragment {
         fragment.setArguments(args);
         return fragment;
     }
-
+    public void setSearchQuery(String query) {
+        this.searchQuery = query;
+        if (noteAdapter != null) {
+            noteAdapter.setSearchQuery(query);
+        }
+    }
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

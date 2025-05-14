@@ -7,73 +7,83 @@
     android:layout_height="match_parent"
     >
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_centerInParent="true">
+        android:layout_marginEnd="50dp"
+        android:layout_marginStart="50dp"
+        android:layout_marginTop="60dp"
+        android:layout_alignParentStart="true"
+        tools:ignore="UselessParent">
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Login"
+            android:text="@string/login"
             android:gravity="center"
             android:textSize="30sp"
             android:textStyle="bold"
             android:id="@+id/tvLogin"
-            android:layout_marginBottom="20sp"
+            android:textColor="@color/black"
+            android:layout_marginBottom="80dp"
             />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginStart="50sp"
-            android:layout_marginEnd="50sp"
             android:background="@drawable/only_border"
             >
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingEnd="20sp"
-                android:paddingStart="20sp"
-                android:layout_marginTop="20sp">
+                android:layout_marginTop="20dp"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                >
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Email"
+                    android:text="@string/email"
                     android:textColor="@color/black"
-                    android:layout_marginBottom="10sp"/>
+                    android:layout_marginBottom="10sp"
+                    android:labelFor="@+id/edEmail"/>
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:autofillHints=""
                     android:background="@drawable/only_border"
-                    android:hint="Email"
-                    android:paddingStart="5sp"
-                    android:paddingTop="10sp"
-                    android:paddingBottom="10sp"
-                    android:id="@+id/edEmail"/>
+                    android:inputType="textEmailAddress"
+                    android:paddingStart="5dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:id="@id/edEmail"
+                    tools:ignore="RtlSymmetry" />
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingEnd="20sp"
-                android:paddingStart="20sp"
-                android:layout_marginTop="20sp">
+                android:layout_marginTop="20dp"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp">
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Password"
+                    android:text="@string/password"
                     android:textColor="@color/black"
-                    android:layout_marginBottom="10sp"/>
+                    android:layout_marginBottom="10sp"
+                    android:labelFor="@+id/edPassword"/>
                 <EditText
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:autofillHints=""
                     android:background="@drawable/only_border"
-                    android:hint="Password"
+                    android:inputType="textPassword"
                     android:paddingStart="5sp"
                     android:paddingTop="10sp"
                     android:paddingBottom="10sp"
-                    android:id="@+id/edPassword"/>
+                    android:id="@id/edPassword"
+                    tools:ignore="RtlSymmetry" />
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
@@ -86,7 +96,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:id="@+id/btLogin"
-                    android:text="Login"
+                    android:text="@string/login"
                     android:background="@drawable/border_background_style_second"/>
             </LinearLayout>
             <LinearLayout
@@ -98,21 +108,25 @@
                 android:layout_marginTop="20sp"
                 android:layout_marginBottom="20sp">
                 <TextView
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/register"
+                    android:text="@string/register_underline"
                     android:gravity="center"
                     android:textColor="@color/black"
                     android:id="@+id/btRegister"
+                    android:textSize="18sp"
                     />
                 <TextView
+                    android:layout_weight="1"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:text="@string/forgot_password"
-                    android:gravity="center"
-                    android:textColor="@color/black"/>
+                    android:layout_gravity="end"
+                    android:id="@+id/tvForgotPassword"
+                    android:textSize="18sp"
+                    android:textColor="@color/black"
+                    android:gravity="right"/>
+
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

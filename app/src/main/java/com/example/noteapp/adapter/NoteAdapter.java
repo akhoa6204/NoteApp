@@ -4,10 +4,12 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.text.Html;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.BackgroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -56,6 +58,11 @@ public class NoteAdapter extends BaseAdapter {
     public List<NoteModel> getListNote(){
         return listNote;
     }
+    private String searchQuery = "";
+    public void setSearchQuery(String query) {
+        this.searchQuery = query;
+        notifyDataSetChanged();
+    }
     @SuppressLint("SetTextI18n")
     @Override
     public View getView(final int i, View convertView, ViewGroup viewGroup) {
@@ -100,7 +107,7 @@ public class NoteAdapter extends BaseAdapter {
             holder.tvTag.setVisibility(View.GONE);
 
 
-            holder.tvOwner.setText("Đang load ...");
+            holder.tvOwner.setText(R.string.loading);
 
             syncHelper.getUser(note.getOwner(), new OnDataSyncListener() {
                 @Override
@@ -108,8 +115,8 @@ public class NoteAdapter extends BaseAdapter {
                 @Override
                 public void onUserLoaded(User user) {
                     if (user != null) {
-                        String name = user.getFirstName() + " " + user.getLastName();
-                        holder.tvOwner.setText(name + " đã chia sẻ");
+                        String name = user.getName();
+                        holder.tvOwner.setText(name + " " + mContext.getString(R.string.shared));
                     }
                 }
 
@@ -138,7 +145,6 @@ public class NoteAdapter extends BaseAdapter {
                 intent.putExtra("KEY_NOTE_ID", note.getId());
                 intent.putExtra("OWNER", note.getOwner());
                 ((Activity) mContext).startActivity(intent);
-                ((Activity) mContext).finish();
             } else {
                 if (selectedItems.contains(note)) {
                     selectedItems.remove(note);
@@ -195,6 +201,24 @@ public class NoteAdapter extends BaseAdapter {
         SpannableString spannable = new SpannableString(trimmedText);
         TextUtils.copySpansFrom(spanned, 0, trimmedText.length(), null, spannable, 0);
 
+        if (!TextUtils.isEmpty(searchQuery)) {
+            String lowerText = trimmedText.toLowerCase();
+            String lowerQuery = searchQuery.toLowerCase();
+
+            int index = lowerText.indexOf(lowerQuery);
+            while (index >= 0) {
+                int end = index + lowerQuery.length();
+                spannable.setSpan(
+                        new BackgroundColorSpan(Color.parseColor("#FFD95F")),
+                        index, end,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                );
+                index = lowerText.indexOf(lowerQuery, end);
+            }
+        }
+
         return spannable;
     }
+
+
 }

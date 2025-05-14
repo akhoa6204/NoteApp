@@ -3,7 +3,12 @@ package com.example.noteapp.myDatabase;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
+import android.text.Editable;
+import android.text.Spannable;
+import android.text.style.BackgroundColorSpan;
 import android.util.Log;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 
@@ -11,10 +16,16 @@ import androidx.annotation.NonNull;
 
 import com.example.noteapp.MainActivity;
 import com.example.noteapp.adapter.UserAdapter;
+import com.example.noteapp.custom.CursorSpan;
+import com.example.noteapp.custom.CustomEditText;
 import com.example.noteapp.interfacePackage.NoteUpdateListener;
+import com.example.noteapp.interfacePackage.OnCheckExistsSharedUser;
 import com.example.noteapp.interfacePackage.OnDataSyncListener;
 import com.example.noteapp.interfacePackage.OnEmailCheckListener;
+import com.example.noteapp.interfacePackage.OnEmailExists;
 import com.example.noteapp.interfacePackage.OnSharedNotePermission;
+import com.example.noteapp.interfacePackage.OnSharedUserUpdate;
+import com.example.noteapp.interfacePackage.PermissionCallback;
 import com.example.noteapp.model.NoteContent;
 import com.example.noteapp.model.NoteModel;
 import com.example.noteapp.model.SharedNote;
@@ -40,9 +51,10 @@ import java.util.function.Consumer;
 
 public class FirebaseSyncHelper {
     private Context mContext;
-    private ValueEventListener noteDeletionListener, noteUpdationListener,
+    private ValueEventListener noteDeletionListener,
             sharedNoteUpdationListener, sharedNoteDeletetionListener,
-            listenNote, listenSharedNote;
+            listenNote, listenSharedNote, titleListener, contentListener;
+    private DatabaseReference titleRef, contentRef;
     private DatabaseReference noteRef, sharedNoteRef;
     public FirebaseSyncHelper(Context context) {
         this.mContext = context;
@@ -82,9 +94,9 @@ public class FirebaseSyncHelper {
 
         sharedNoteRef.addValueEventListener(sharedNoteDeletetionListener);
     }
-    public void stopSharedNoteDeletionListener(){
+    public void stopSharedNoteDeletionListener(String noteId){
         if (sharedNoteRef != null && sharedNoteDeletetionListener != null){
-            sharedNoteRef.removeEventListener(sharedNoteDeletetionListener);
+            sharedNoteRef.child(noteId).removeEventListener(sharedNoteDeletetionListener);
         }
     }
     public void listenForNoteDeletion(Context context, String noteId) {
@@ -109,54 +121,62 @@ public class FirebaseSyncHelper {
 
         noteRef.addValueEventListener(noteDeletionListener);
     }
-    public void stopListeningForNoteDeletion() {
+    public void stopListeningForNoteDeletion(String noteId) {
         if (noteRef != null && noteDeletionListener != null) {
-            noteRef.removeEventListener(noteDeletionListener);
+            noteRef.child(noteId).removeEventListener(noteDeletionListener);
         }
     }
-    public void listenForNoteUpdation(String noteId, NoteUpdateListener listener) {
-        noteRef = FirebaseDatabase.getInstance().getReference("notes").child(noteId);
+    public void listenforNoteTitle(String noteId, NoteUpdateListener listener){
+        titleRef = FirebaseDatabase.getInstance().getReference("notes").child(noteId).child("title");
+        titleListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                String newTitle = snapshot.getValue(String.class);
+                if (newTitle != null && listener != null) {
+                    Log.d("DEBUG TITLE", "onDataChange: " + newTitle);
+                    listener.onTitleUpdated(newTitle);
+                }
+            }
 
-        noteUpdationListener = new ValueEventListener() {
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        };
+        titleRef.addValueEventListener(titleListener);
+    }
+    public void listenForNoteContent(String noteId, NoteUpdateListener listener) {
+        contentRef = FirebaseDatabase.getInstance().getReference("notes")
+                                        .child(noteId).child("content");
+
+        contentListener  = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (!snapshot.exists()) return;
 
-                // Cập nhật title
-                String newTitle = snapshot.child("title").getValue(String.class);
-                if (newTitle != null && listener != null) {
-                    listener.onTitleUpdated(newTitle);
+                List<Object> contentList = new ArrayList<>();
+
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    String type = child.child("type").getValue(String.class);
+
+                    if ("text".equals(type)) {
+                        String textContent = child.child("textContent").getValue(String.class);
+                        contentList.add(textContent != null ? textContent : "");
+                    } else if ("table".equals(type)) {
+                        List<List<String>> tableData = new ArrayList<>();
+                        for (DataSnapshot row : child.child("tableContent").getChildren()) {
+                            List<String> rowData = new ArrayList<>();
+                            for (DataSnapshot cell : row.getChildren()) {
+                                rowData.add(cell.getValue(String.class));
+                            }
+                            tableData.add(rowData);
+                        }
+                        contentList.add(tableData);
+                    }
                 }
 
-                // Cập nhật content (đúng thứ tự)
-                DataSnapshot contentSnapshot = snapshot.child("content");
-                if (contentSnapshot.exists()) {
-                    List<Object> contentList = new ArrayList<>();
-
-                    for (DataSnapshot child : contentSnapshot.getChildren()) {
-                        String type = child.child("type").getValue(String.class);
-
-                        if ("text".equals(type)) {
-                            String textContent = child.child("textContent").getValue(String.class);
-                            contentList.add(textContent != null ? textContent : "");
-                        }
-                        else if ("table".equals(type)) {
-                            List<List<String>> tableData = new ArrayList<>();
-                            for (DataSnapshot row : child.child("tableContent").getChildren()) {
-                                List<String> rowData = new ArrayList<>();
-                                for (DataSnapshot cell : row.getChildren()) {
-                                    rowData.add(cell.getValue(String.class));
-                                }
-                                tableData.add(rowData);
-                            }
-                            contentList.add(tableData);
-                        }
-                    }
-
-                    // Cập nhật giao diện theo đúng thứ tự
-                    if (listener != null) {
-                        listener.onContentUpdated(contentList);
-                    }
+                if (listener != null) {
+                    listener.onContentUpdated(contentList);
                 }
             }
 
@@ -166,39 +186,39 @@ public class FirebaseSyncHelper {
             }
         };
 
-        noteRef.addValueEventListener(noteUpdationListener);
+        contentRef.addValueEventListener(contentListener);
     }
-
-
-    public void stopListeningForNoteUpdation(){
-        if (noteRef != null && noteUpdationListener != null){
-            noteRef.removeEventListener(noteUpdationListener);
+    public void stopListeningForNoteUpdation(String noteId){
+        if (titleRef != null && titleListener != null) {
+            titleRef.removeEventListener(titleListener);
+        }
+        if (contentRef != null && contentListener != null) {
+            contentRef.removeEventListener(contentListener);
         }
     }
-    public void listenForSharedUserNote(String noteId, Consumer<List<User>> callback) {
+    public void listenForSharedUserNote(String noteId, OnSharedUserUpdate callback) {
         sharedNoteRef = FirebaseDatabase.getInstance().getReference("sharedNote").child(noteId);
         sharedNoteUpdationListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                List<String> userIds = new ArrayList<>();
-                for (DataSnapshot sharedNoteSnapshot : snapshot.getChildren()) {
-                    SharedNote sharedNote = sharedNoteSnapshot.getValue(SharedNote.class);
-                    if (sharedNote != null) {
-                        userIds.add(sharedNote.getSharedUser());
-                    }
-                }
-
-                if (userIds.isEmpty()) {
-                    callback.accept(new ArrayList<>()); // Không có user nào, gọi callback ngay
+                List<User> tempUserList = Collections.synchronizedList(new ArrayList<>());
+                int total = (int) snapshot.getChildrenCount();
+                AtomicInteger counter = new AtomicInteger(total);
+                if (total == 0){
+                    callback.updateSharedUser(null);
                     return;
                 }
-
-                List<User> tempUserList = Collections.synchronizedList(new ArrayList<>());
-                AtomicInteger counter = new AtomicInteger(userIds.size());
                 DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
+                for (DataSnapshot sharedNoteSnapshot : snapshot.getChildren()) {
+                    SharedNote sharedNote = sharedNoteSnapshot.getValue(SharedNote.class);
+                    if (sharedNote == null || sharedNote.getSharedUser() == null) {
+                        if (counter.decrementAndGet() == 0) {
+                            callback.updateSharedUser(tempUserList);
+                        }
+                        continue;
+                    }
 
-                for (String userId : userIds) {
-                    usersRef.child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+                    usersRef.child(sharedNote.getSharedUser()).addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(@NonNull DataSnapshot snapshot) {
                             if (snapshot.exists()) {
@@ -207,8 +227,8 @@ public class FirebaseSyncHelper {
                                     tempUserList.add(user);
                                 }
                             }
-                            if (counter.decrementAndGet() == 0) { // Khi tất cả user đã tải xong
-                                callback.accept(new ArrayList<>(tempUserList));
+                            if (counter.decrementAndGet() == 0) {
+                                callback.updateSharedUser(tempUserList);
                             }
                         }
 
@@ -216,7 +236,7 @@ public class FirebaseSyncHelper {
                         public void onCancelled(@NonNull DatabaseError error) {
                             Log.e("Firebase", "Lỗi khi lấy User: " + error.getMessage());
                             if (counter.decrementAndGet() == 0) {
-                                callback.accept(new ArrayList<>(tempUserList));
+                                callback.updateSharedUser(tempUserList);
                             }
                         }
                     });
@@ -230,9 +250,63 @@ public class FirebaseSyncHelper {
         };
         sharedNoteRef.addValueEventListener(sharedNoteUpdationListener);
     }
-    public void stopListeningForSharedNote(){
+//    public void listenForSharedUserNote(String noteId, Consumer<List<User>> callback) {
+//        sharedNoteRef = FirebaseDatabase.getInstance().getReference("sharedNote").child(noteId);
+//        sharedNoteUpdationListener = new ValueEventListener() {
+//            @Override
+//            public void onDataChange(@NonNull DataSnapshot snapshot) {
+//                List<String> userIds = new ArrayList<>();
+//                for (DataSnapshot sharedNoteSnapshot : snapshot.getChildren()) {
+//                    SharedNote sharedNote = sharedNoteSnapshot.getValue(SharedNote.class);
+//                    if (sharedNote != null) {
+//                        userIds.add(sharedNote.getSharedUser());
+//                    }
+//                }
+//
+//                if (userIds.isEmpty()) {
+//                    callback.accept(new ArrayList<>()); // Không có user nào, gọi callback ngay
+//                }
+//
+//                List<User> tempUserList = Collections.synchronizedList(new ArrayList<>());
+//                AtomicInteger counter = new AtomicInteger(userIds.size());
+//                DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
+//
+//                for (String userId : userIds) {
+//                    usersRef.child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+//                        @Override
+//                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+//                            if (snapshot.exists()) {
+//                                User user = snapshot.getValue(User.class);
+//                                if (user != null) {
+//                                    tempUserList.add(user);
+//                                }
+//                            }
+//                            if (counter.decrementAndGet() == 0) { // Khi tất cả user đã tải xong
+//                                callback.accept(new ArrayList<>(tempUserList));
+//                            }
+//                        }
+//
+//                        @Override
+//                        public void onCancelled(@NonNull DatabaseError error) {
+//                            Log.e("Firebase", "Lỗi khi lấy User: " + error.getMessage());
+//                            if (counter.decrementAndGet() == 0) {
+//                                callback.accept(new ArrayList<>(tempUserList));
+//                            }
+//                        }
+//                    });
+//                }
+//            }
+//
+//            @Override
+//            public void onCancelled(@NonNull DatabaseError error) {
+//                Log.e("Firebase", "Lỗi khi lắng nghe sharedNote", error.toException());
+//            }
+//        };
+//        sharedNoteRef.addValueEventListener(sharedNoteUpdationListener);
+//    }
+    public void stopListeningForSharedNote(String noteId){
         if (sharedNoteRef != null && sharedNoteUpdationListener != null){
-            sharedNoteRef.removeEventListener(sharedNoteUpdationListener);
+            sharedNoteRef.child(noteId).removeEventListener(sharedNoteUpdationListener);
         }
     }
 
@@ -275,7 +349,6 @@ public class FirebaseSyncHelper {
                             String key = sharedSnapshot.getKey();
                             if (key == null) {
                                 Log.e("Firebase", "sharedId is null, cannot remove");
-                                return;
                             }
                             shareNoteRef.child(key).removeValue()
                                     .addOnSuccessListener(aVoid -> Log.d("Firebase", "User " + userId + " removed"))
@@ -304,7 +377,6 @@ public class FirebaseSyncHelper {
 
                 if (!snapshot.exists()) {
                     Log.e("Firebase", "sharedNote/" + noteId + " không có dữ liệu!");
-                    return;
                 }
 
                 for (DataSnapshot shareIdSnapshot : snapshot.getChildren()) {
@@ -387,9 +459,6 @@ public class FirebaseSyncHelper {
                         for (DataSnapshot shareData : noteId.getChildren()){
                             SharedNote sharedNote = shareData.getValue(SharedNote.class);
                             if (sharedNote != null && sharedNote.getSharedUser().equals(userId)){
-                                Log.d("DEBUG", "userId: " + userId);
-                                Log.d("DEBUG", "SharedUser: " + sharedNote.getSharedUser());
-
                                 listId.add(sharedNote.getNoteId());
                             }
                         }
@@ -403,10 +472,8 @@ public class FirebaseSyncHelper {
                                         NoteModel note = noteSnapshot.getValue(NoteModel.class);
                                         if (note != null && listId.contains(note.getId())){
                                             tempNotes.add(note);
-                                            Log.d("DEBUG", "sharedNote: " + note);
                                         }
                                     }
-                                    Log.d("DEBUG", "sharedNote size: " + tempNotes.size());
                                     callback.onNotesUpdated(tempNotes);
                                 }
                             }
@@ -459,118 +526,6 @@ public class FirebaseSyncHelper {
             }
         });
     }
-    public void getNote(String noteId, OnDataSyncListener callback) {
-        DatabaseReference noteRef = FirebaseDatabase.getInstance().getReference("notes").child(noteId);
-
-        noteRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    NoteModel note = snapshot.getValue(NoteModel.class);
-
-                    if (note != null && note.getContent() != null) { // Kiểm tra note và content không null
-                        Log.d("DEBUG", "Note content size: " + note.getContent().size());
-
-                        for (int i = 0; i < note.getContent().size(); i++) {
-                            NoteContent item = note.getContent().get(i);
-
-                            if (item != null) {
-                                Log.d("DEBUG FIREBASE", "Item at index " + i + ": " + item);
-
-                                if (item.getType() != null) {
-                                    Log.d("DEBUG FIREBASE", "Item type: " + item.getType());
-                                } else {
-                                    Log.e("DEBUG FIREBASE", "Item type is null at index " + i);
-                                }
-
-                                if ("text".equals(item.getType()) && item.getTextContent() != null) {
-                                    Log.d("DEBUG FIREBASE", "Item text content: " + item.getTextContent());
-                                } else if ("table".equals(item.getType()) && item.getTableContent() != null) {
-                                    Log.d("DEBUG FIREBASE", "Item table content: " + item.getTableContent());
-                                } else {
-                                    Log.e("DEBUG FIREBASE", "Content is null at index " + i);
-                                }
-                            } else {
-                                Log.e("DEBUG FIREBASE", "Item is null at index " + i);
-                            }
-                        }
-                        callback.onNoteLoaded(note);
-                    } else {
-                        Log.e("DEBUG", "Note content is null");
-                    }
-                } else {
-                    Log.e("DEBUG", "Snapshot does not exist for noteId: " + noteId);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("DEBUG FIREBASE", "Database error: " + error.getMessage());
-            }
-        });
-    }
-    public void getSharedNote(String noteId, OnDataSyncListener callback) {
-        DatabaseReference sharedNoteRef = FirebaseDatabase.getInstance().getReference("sharedNote").child(noteId);
-        sharedNoteRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    List<String> userIds = new ArrayList<>();
-                    List<User> userList = Collections.synchronizedList(new ArrayList<>());
-                    AtomicInteger counter = new AtomicInteger(0); // Biến đếm
-
-                    for (DataSnapshot sharedNoteSnapshot : snapshot.getChildren()) {
-                        SharedNote sharedNote = sharedNoteSnapshot.getValue(SharedNote.class);
-                        if (sharedNote != null) {
-                            userIds.add(sharedNote.getSharedUser());
-                            Log.d("DEBUG FIREBASE GETSHAREDNOTE", "sharedUser: " + sharedNote.getSharedUser());
-                        }
-                    }
-
-                    if (userIds.isEmpty()) {
-                        callback.onSharedNoteLoaded(userList);
-                        return;
-                    }
-
-                    DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
-                    counter.set(userIds.size()); // Đặt số lượng user cần tải
-
-                    for (String userId : userIds) {
-                        usersRef.child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
-                            @Override
-                            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                                if (snapshot.exists()) {
-                                    User user = snapshot.getValue(User.class);
-                                    if (user != null) {
-                                        userList.add(user);
-                                    }
-                                    Log.d("DEBUG FIREBASE User", "User: " + user);
-                                }
-                                if (counter.decrementAndGet() == 0) { // Khi tất cả user đã tải xong
-                                    callback.onSharedNoteLoaded(new ArrayList<>(userList));
-                                }
-                            }
-
-                            @Override
-                            public void onCancelled(@NonNull DatabaseError error) {
-                                Log.e("Firebase", "Lỗi khi lấy User: " + error.getMessage());
-                                if (counter.decrementAndGet() == 0) {
-                                    callback.onSharedNoteLoaded(new ArrayList<>(userList));
-                                }
-                            }
-                        });
-                    }
-                } else {
-                    callback.onSharedNoteLoaded(new ArrayList<>());
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("Firebase", "Lỗi khi lấy Shared Notes: " + error.getMessage());
-            }
-        });
-    }
     public void getPermissionOfNoteForSharedUser(String noteId, String userId, OnSharedNotePermission callback){
         DatabaseReference sharedNoteRef = FirebaseDatabase.getInstance().getReference("sharedNote").child(noteId);
         sharedNoteRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -619,7 +574,64 @@ public class FirebaseSyncHelper {
             }
         });
     }
-    public void checkIfEmailExists(String email, OnEmailCheckListener listener) {
+    public void checkIfEmailExists(String noteId, String email, OnEmailCheckListener listener) {
+        DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
+        DatabaseReference noteRef = FirebaseDatabase.getInstance().getReference("notes").child(noteId);
+        usersRef.orderByChild("email").equalTo(email).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    for (DataSnapshot userSnapshot : snapshot.getChildren()) {
+                        User user = userSnapshot.getValue(User.class);
+                        noteRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@NonNull DataSnapshot noteSnapshot) {
+                                String owner = noteSnapshot.getValue(NoteModel.class).getOwner();
+                                if (owner != null && owner.equals(user.getId())){
+                                    listener.onResult(true, user, "owner");
+                                }else{
+                                    listener.onResult(true, user, null);
+                                }
+                            }
+
+                            @Override
+                            public void onCancelled(@NonNull DatabaseError error) {
+
+                            }
+                        });
+                    }
+                }
+                else{listener.onResult(false, null, null);}
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                listener.onResult(false, null, null);
+            }
+        });
+    }
+    public void listenForUpdatePermission(String noteId, String userId, PermissionCallback callback){
+        DatabaseReference sharedNoteRef = FirebaseDatabase.getInstance().getReference("sharedNote").child(noteId);
+        sharedNoteRef.orderByChild("sharedUser").equalTo(userId).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (DataSnapshot sharedNoteData : snapshot.getChildren()) {
+                    Integer permission = sharedNoteData.child("permission").getValue(Integer.class);
+                    callback.onPermissionResult(permission);
+                    return;
+                }
+
+                callback.onPermissionResult(null);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                callback.onPermissionResult(null);
+            }
+        });
+    }
+    public void checkSharedUserForNote(String noteId, String email, OnCheckExistsSharedUser listener){
+        DatabaseReference sharedNoteRef = FirebaseDatabase.getInstance().getReference("sharedNote").child(noteId);
         DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
         usersRef.orderByChild("email").equalTo(email).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -627,18 +639,68 @@ public class FirebaseSyncHelper {
                 if (snapshot.exists()) {
                     for (DataSnapshot userSnapshot : snapshot.getChildren()) {
                         User user = userSnapshot.getValue(User.class);
-                        listener.onResult(true, user);
-                        return;
+                        if (user != null && user.getId() == null) {
+                            user.setId(userSnapshot.getKey()); // Gán thủ công ID nếu bị null
+                        }
+
+                        Log.d("DEBUG", "user: " + user.getId());
+
+                        sharedNoteRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                boolean found = false;
+                                for (DataSnapshot sharedNoteSnapshot : snapshot.getChildren()) {
+                                    SharedNote sharedNote = sharedNoteSnapshot.getValue(SharedNote.class);
+                                    if (sharedNote != null && sharedNote.getSharedUser().equals(user.getId())) {
+                                        Log.d("DEBUG", "sharedNote: " + true);
+                                        listener.checkExists(true);
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (!found) {
+                                    Log.d("DEBUG", "sharedNote: " + false);
+                                    listener.checkExists(false);
+                                }
+                            }
+
+                            @Override
+                            public void onCancelled(@NonNull DatabaseError error) {
+                            }
+                        });
+
+                        break; // Vì chỉ cần xử lý user đầu tiên match email
                     }
+                } else {
+                    listener.checkExists(false);
                 }
-                listener.onResult(false, null);
             }
+
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                listener.onResult(false, null);
             }
         });
     }
 
+    public void checkEmailExists(String email, OnEmailExists listener) {
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("users");
+        userRef.orderByChild("email").equalTo(email)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        // Nếu snapshot tồn tại (tức là có ít nhất 1 user với email khớp)
+                        if (snapshot.exists()) {
+                            listener.onResult(true);
+                        } else {
+                            listener.onResult(false);
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        listener.onResult(false);
+                    }
+                });
+    }
 }

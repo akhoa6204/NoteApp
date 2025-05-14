@@ -13,29 +13,28 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="20sp"
+        android:layout_marginBottom="10sp"
         android:layout_marginTop="20dp">
 
         <TextView
             android:id="@+id/btnBack"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
             android:layout_marginStart="5sp"
             android:layout_marginEnd="5sp"
             android:fontFamily="@font/material_icons"
             android:text="\ue5e0"
-            android:textColor="#FFEB3B"
-            android:textSize="30sp"
-            android:textStyle="bold"
-            android:layout_gravity="center_vertical"
-            />
+            android:textColor="#FFD95F"
+            android:textSize="25sp"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Ghi chú"
-            android:textColor="#FFEB3B"
+            android:text="@string/app_name"
+            android:textColor="#FFD95F"
             android:textSize="30sp"
             />
         <TextView
@@ -46,8 +45,8 @@
             android:layout_marginEnd="5sp"
             android:fontFamily="@font/material_icons"
             android:text="\ue6b8"
-            android:textColor="#FFEB3B"
-            android:textSize="30sp"
+            android:textColor="#FFD95F"
+            android:textSize="25sp"
             android:textStyle="bold"
             android:layout_gravity="center_vertical"
             />
@@ -59,8 +58,8 @@
             android:layout_marginEnd="5sp"
             android:fontFamily="@font/material_icons"
             android:text="\ue5d3"
-            android:textColor="#FFEB3B"
-            android:textSize="30sp"
+            android:textColor="#FFD95F"
+            android:textSize="25sp"
             android:textStyle="bold"
             android:layout_gravity="center_vertical"
             />
@@ -77,15 +76,11 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             >
-            <EditText
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@null"
-                android:hint="Title"
-                android:textSize="30sp"
-                android:textStyle="bold"
-                android:id="@+id/edTitle"
-                />
+                android:orientation="vertical"
+                android:id="@+id/lrTitle"/>
 
             <LinearLayout
                 android:id="@+id/lrContent"
@@ -109,8 +104,8 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="Aa"
-            android:textColor="#FFEB3B"
-            android:textSize="30sp"
+            android:textColor="#FFD95F"
+            android:textSize="25sp"
             android:textStyle="bold"
             android:paddingTop="10sp"
             android:paddingBottom="10sp"/>
@@ -121,8 +116,8 @@
             android:gravity="center"
             android:fontFamily="@font/material_icons"
             android:text="\ue241"
-            android:textColor="#FFEB3B"
-            android:textSize="30sp"
+            android:textColor="#FFD95F"
+            android:textSize="25sp"
             android:textStyle="bold"
             android:paddingTop="10sp"
             android:paddingBottom="10sp"
@@ -134,8 +129,8 @@
             android:fontFamily="@font/material_icons"
             android:text="\ue3ec"
             android:gravity="center"
-            android:textColor="#FFEB3B"
-            android:textSize="30sp"
+            android:textColor="#FFD95F"
+            android:textSize="25sp"
             android:textStyle="bold"
             android:paddingTop="10sp"
             android:paddingBottom="10sp"
