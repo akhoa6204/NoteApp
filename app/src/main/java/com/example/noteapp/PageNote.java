@@ -236,14 +236,15 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
     public Spanned translateSpanned(String text) {
         if (text == null) return new SpannableString("");
 
-        Spanned spanned = HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_COMPACT);
-        String trimmedText = spanned.toString().replaceAll("\n$", "");
+        Spanned spanned = HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_LEGACY);
+        String cleanedText = spanned.toString().replaceAll("[\\n\\r]+$", "");
 
-        SpannableString spannable = new SpannableString(trimmedText);
-        TextUtils.copySpansFrom(spanned, 0, trimmedText.length(), null, spannable, 0);
+        SpannableString spannable = new SpannableString(cleanedText);
+        TextUtils.copySpansFrom(spanned, 0, cleanedText.length(), null, spannable, 0);
 
         return spannable;
     }
+
     public String translateHtml(Spanned text){
         return Html.toHtml(text, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE);
     }
@@ -621,17 +622,10 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             }
 
         });
-        editText.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                int offset = editText.getSelectionStart();
-//                updateCursorInFirebase(noteId, userId, offset, "text", (int) editText.getTag(), -1, -1 );
-            }
-        });
         editText.setOnSelectionChangeListener(new CustomEditText.OnSelectionChangeListener() {
             @Override
             public void onSelectionChanged(int start, int end) {
                 updateTextStyleState(editText, start, end);
-//                updateCursorInFirebase(noteId, userId, start, "text", (int) editText.getTag(), -1, -1);
             }
         });
 
@@ -818,10 +812,6 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
                 TableRow.LayoutParams.WRAP_CONTENT,
                 1.0f
         ));
-        DatabaseReference cellRef = FirebaseDatabase.getInstance().getReference("notes")
-                .child(noteId).child("content").child(String.valueOf(tablePosition))
-                .child("tableContent").child(String.valueOf(rowIndex))
-                .child(String.valueOf(colIndex));
 
         cell.setTag(new int[]{tablePosition, rowIndex, colIndex});
         cell.addTextChangedListener(new TextWatcher() {
@@ -861,20 +851,11 @@ public class PageNote extends AppCompatActivity implements View.OnClickListener 
             }
 
         });
-        cell.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) {
-                int cursorPosition = cell.getSelectionStart();
-                int[] positions = (int[]) cell.getTag();
-//                 (noteId, userId, cursorPosition, "table", positions[0], positions[1], positions[2]);
-            }
-        });
 
         cell.setOnSelectionChangeListener(new CustomEditText.OnSelectionChangeListener() {
             @Override
             public void onSelectionChanged(int start, int end) {
                 updateTextStyleState(cell, start, end);
-                int[] positions = (int[]) cell.getTag();
-//                updateCursorInFirebase(noteId, userId, start, "table", positions[0], positions[1], positions[2]);
             }
         });
         return cell;
